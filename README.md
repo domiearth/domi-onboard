@@ -45,6 +45,7 @@ curl -fsSL https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard
 - **Claude Desktop 安裝失敗時** — 會 fallback 到「請手動下載」提示，open <https://claude.ai/download>。
 - **gh auth login 是互動式的** — 跟著 prompt 走（建議選 HTTPS + browser 認證）。
 - **AgentHUB 連線設定** — Step 9b 會詢問 host / user / password；host / user 跟你的 DOMI onboarding 窗口索取（LAN 或 Tailscale IP 視你的接入方式而定）。留空可跳過,稍後再跑 hub-setup.sh。
+- **新人導覽 session** — 全部裝完後（Step 11）會問要不要開一個 Claude session，由 Claude **一步一步**帶你熟悉 claude CLI 與 `gh`（含 clone foreman repo）。按 Enter 即開始；輸入 `/exit` 結束。跳過的話之後隨時可 `cd ~/project && claude` 自己開。
 
 ---
 

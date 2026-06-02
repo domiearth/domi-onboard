@@ -267,3 +267,29 @@ echo "    2. Run: cd $DOMI_PROJECT_DIR && gh repo clone domiearth/foreman"
 echo "    3. Run: cd foreman && claude   # start your first session"
 echo "    4. (If skipped above) run hub-setup.sh to configure AgentHUB later"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# ── 11. Guided first session (optional) ─────────────────────
+# Hand off into a live Claude Code session that tutors the new hire through
+# the claude CLI and gh (clone a project), one step at a time. Skipped when
+# non-interactive or if the claude CLI isn't on PATH yet.
+
+TUTOR_PROMPT="你是 DOMI 的新人 onboarding 導師。請全程用繁體中文,一步一步帶我(一次只給一個動作,等我回報結果或貼上輸出後,再進行下一步,不要一次把全部步驟列出來)。
+
+要教的兩件事:
+1. Claude Code CLI 基礎 —— 怎麼跟你對話、常用斜線指令(/help、/clear、/exit)、怎麼在某個 repo 目錄裡開 session、怎麼結束 session。
+2. gh(GitHub CLI)—— 先用 \`gh auth status\` 確認已登入(沒登入就帶我跑 \`gh auth login\`),然後把 DOMI 的 foreman repo clone 到 ~/project:
+     cd ~/project && gh repo clone domiearth/foreman
+
+每一步請給我「可以直接複製貼上的指令」,並在我回覆後再繼續。現在就從第一步開始。"
+
+if [[ -z "${DOMI_NONINTERACTIVE:-}" ]] && command -v claude &>/dev/null; then
+  echo ""
+  printf '  Start a guided Claude session to learn the claude CLI + gh? [Y/n] '
+  read -r START_TUTORIAL </dev/tty
+  if [[ ! "$START_TUTORIAL" =~ ^[nN]$ ]]; then
+    info "Launching guided session — follow along, type /exit when done."
+    echo ""
+    exec claude "$TUTOR_PROMPT" </dev/tty
+  fi
+  info "Skipped guided session. Start one anytime with:  cd $DOMI_PROJECT_DIR && claude"
+fi
