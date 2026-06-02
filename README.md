@@ -12,6 +12,28 @@
 
 跑完會裝好：git、gh CLI、Node.js 22、Claude Code CLI、Claude Desktop、sshpass、DOMI marketplace + 5 個 plugin（含 hub-relay），並設定好 AgentHUB 連線。
 
+### 快速開始（一行下載 + 執行）
+
+**macOS**（Terminal，**勿加 `sudo`**）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-macos.sh -o ~/onboard-macos.sh && bash ~/onboard-macos.sh
+```
+
+**Windows**（**admin** PowerShell）：
+
+```powershell
+$f="$env:TEMP\onboard-windows.ps1"; irm https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-windows.ps1 -OutFile $f; powershell -ExecutionPolicy Bypass -File $f
+```
+
+**AgentHUB**（SSH 進 server 後）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-agenthub.sh -o ~/onboard-agenthub.sh && bash ~/onboard-agenthub.sh
+```
+
+> 各平台的前置需求、執行原則、注意事項見下方對應章節。
+
 ---
 
 ## macOS
