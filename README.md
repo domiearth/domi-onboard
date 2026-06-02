@@ -92,6 +92,16 @@ Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 **強烈建議以系統管理員身份開 PowerShell**（右鍵 PowerShell → 「以系統管理員身份執行」），因為 winget 安裝某些套件需要 admin。
 
+**推薦：一行下載 + 執行（console 全程搞定，免手動下載、免改執行原則）**
+
+```powershell
+$f="$env:TEMP\onboard-windows.ps1"; irm https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-windows.ps1 -OutFile $f; powershell -ExecutionPolicy Bypass -File $f
+```
+
+`irm`（=`Invoke-RestMethod`）先把 script 抓到暫存檔，再用 `-ExecutionPolicy Bypass` 開一個子 PowerShell 跑它 —— 等於 macOS 的 `curl -o … && bash …`，不用先 `Set-ExecutionPolicy`、不用瀏覽器下載。互動提問（workbench / Hub / 導覽 session）照常運作。
+
+**或手動下載後執行：**
+
 ```powershell
 # 1. 開啟 admin PowerShell
 # 2. cd 到 script 所在目錄
@@ -119,6 +129,7 @@ Set-ExecutionPolicy Bypass -Scope Process -Force
   ```
 - **gh auth login 走瀏覽器** — 跟著 prompt 走。
 - **AgentHUB 連線設定** — Step 9b 互動式提問 host / user / password；host / user 跟你的 DOMI onboarding 窗口索取。留空可跳過,稍後再跑 hub-setup.ps1。
+- **新人導覽 session** — 全部裝完後（Step 11）會問要不要開一個 Claude session，由 Claude **一步一步**帶你熟悉 claude CLI 與 `gh`（含 clone foreman repo）。按 Enter 即開始；輸入 `/exit` 結束。若 `claude` 裝完還沒進 PATH，重開 PowerShell 後 `cd $env:USERPROFILE\project; claude` 自己開。
 
 ---
 
