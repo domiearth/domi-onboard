@@ -24,6 +24,22 @@ fail()  { printf '\033[1;31m[FAIL]\033[0m  %s\n' "$*"; exit 1; }
 
 have() { command -v "$1" &>/dev/null; }
 
+DOMI_ONBOARD_URL="https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-agenthub.sh"
+
+# ── stdin / TTY guard ────────────────────────────────────────
+# Intended usage is `bash onboard-agenthub.sh` from a clone, but if someone
+# pipes it (`curl … | bash`) stdin becomes the script itself — and child
+# processes (apt, the piped installers) can then consume the un-parsed
+# remainder. Re-fetch to a real file and re-exec with the terminal as stdin;
+# fall through unattended if there's no controlling terminal.
+if [[ ! -t 0 && -z "${DOMI_ONBOARD_REEXEC:-}" && -r /dev/tty ]] && have curl; then
+  _self="$(mktemp "${TMPDIR:-/tmp}/onboard-agenthub.XXXXXX.sh")"
+  if curl -fsSL "$DOMI_ONBOARD_URL" -o "$_self"; then
+    exec env DOMI_ONBOARD_REEXEC=1 bash "$_self" </dev/tty
+  fi
+  rm -f "$_self"
+fi
+
 LOCAL_BIN="$HOME/.local/bin"
 CARGO_BIN="$HOME/.cargo/bin"
 mkdir -p "$LOCAL_BIN"

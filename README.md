@@ -25,13 +25,19 @@
 ### 執行方式
 
 ```bash
-# 直接下載執行（domi-onboard 是 public repo，curl 免認證）
-curl -fsSL https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-macos.sh | bash
+# 推薦：先下載再跑（最清楚，互動提問一定正常）
+curl -fsSL https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-macos.sh -o ~/onboard-macos.sh
+bash ~/onboard-macos.sh
 
 # 或先 clone domi-onboard repo 後執行
 gh repo clone domiearth/domi-onboard ~/domi-onboard
 bash ~/domi-onboard/onboard-macos.sh
+
+# 也支援 pipe（script 偵測到被 pipe 會自動重新下載 + 接上終端機再跑）
+curl -fsSL https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-macos.sh | bash
 ```
+
+> ⚠️ **不要在前面加 `sudo`**（`sudo curl … | bash` ❌）。整條 pipeline 用 root 跑會讓 Homebrew 拒裝、sudo 密碼在非 TTY 下對不上。script 內部需要 sudo 的地方（brew）會自己跳密碼。
 
 ### 注意事項
 
@@ -219,6 +225,15 @@ Apple Silicon 上 brew 裝在 `/opt/homebrew/bin/brew`，需要把它加進 PATH
 echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 source ~/.zprofile
 ```
+
+### macOS：跑 onboarding「卡住」/ log 噴出 script 原始碼
+
+兩個常見原因，通常一起出現：
+
+1. **用了 `sudo curl … | bash`** — 整條 pipeline 被 root + pipe 跑壞：互動 `read` 讀不到鍵盤，且 Homebrew / go build 等子程序會把 pipe 裡「還沒執行的 script 內容」吃掉，於是 log 突然冒出 script 原始碼然後卡死。
+   **解法**：拿掉 `sudo`，改成先下載再跑（見上方「執行方式」）。最新版 script 已能偵測 pipe 並自動重新下載 + 接終端機，但 `sudo` 仍請避免。
+
+2. **`==> ./make.bash` 停很久不是當機** — 舊版 macOS（如 **macOS 12**）被 Homebrew 列為 [Tier 3](https://docs.brew.sh/Support-Tiers#tier-3)，沒有預編好的 bottle，`gh` 的相依套件 `go` 只能**從原始碼編譯**，會跑十幾分鐘。耐心等它跑完即可；想避開可考慮升級 macOS。
 
 ### Windows：Scoop 安裝時 `Set-ExecutionPolicy ... ExecutionPolicyOverride`
 

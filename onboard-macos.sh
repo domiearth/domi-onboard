@@ -8,6 +8,7 @@ set -euo pipefail
 # ──────────────────────────────────────────────────────────────
 
 DOMI_PROJECT_DIR="$HOME/project"
+DOMI_ONBOARD_URL="https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-macos.sh"
 
 # ── helpers ──────────────────────────────────────────────────
 
@@ -23,6 +24,30 @@ need_cmd() {
   fi
   return 0
 }
+
+# ── stdin / TTY guard ────────────────────────────────────────
+# When launched as `curl … | bash`, stdin is the *pipe carrying this script*,
+# not the keyboard. Two things break:
+#   1. every interactive `read` below has nothing to read from; and
+#   2. any child process that touches stdin (the Homebrew installer, the Go
+#      source build on old macOS, sudo) eats the un-parsed remainder of this
+#      script — which is exactly the "hang + script source dumped to terminal"
+#      symptom on macOS 12.
+# Fix: if our stdin isn't a terminal, re-fetch ourselves to a real file and
+# re-exec with the controlling terminal (/dev/tty) as stdin. If there's no
+# terminal at all (CI / nested pipe), fall through in non-interactive mode and
+# skip the prompts instead of blocking.
+if [[ ! -t 0 && -z "${DOMI_ONBOARD_REEXEC:-}" ]]; then
+  if [[ -r /dev/tty ]]; then
+    _self="$(mktemp "${TMPDIR:-/tmp}/onboard-macos.XXXXXX.sh")"
+    if curl -fsSL "$DOMI_ONBOARD_URL" -o "$_self"; then
+      exec env DOMI_ONBOARD_REEXEC=1 bash "$_self" </dev/tty
+    fi
+    rm -f "$_self"
+    warn "Could not re-fetch script for interactive run; continuing non-interactively."
+  fi
+  export DOMI_NONINTERACTIVE=1
+fi
 
 # ── 0. Homebrew ──────────────────────────────────────────────
 
@@ -100,8 +125,10 @@ else
   else
     warn "Auto-install failed. Please download manually:"
     warn "  https://claude.ai/download"
-    warn "Press Enter after installing, or Ctrl+C to skip..."
-    read -r
+    if [[ -z "${DOMI_NONINTERACTIVE:-}" ]]; then
+      warn "Press Enter after installing, or Ctrl+C to skip..."
+      read -r </dev/tty
+    fi
   fi
 fi
 
@@ -124,8 +151,13 @@ mkdir -p "$DOMI_PROJECT_DIR"
 
 echo ""
 info "claude-workbench — Kirin's productivity plugins (mentor, kanban, chat)"
-printf '  Install claude-workbench? [y/N] '
-read -r INSTALL_WORKBENCH
+if [[ -n "${DOMI_NONINTERACTIVE:-}" ]]; then
+  INSTALL_WORKBENCH="n"
+  info "Non-interactive — skipping claude-workbench (re-run in a terminal to install)."
+else
+  printf '  Install claude-workbench? [y/N] '
+  read -r INSTALL_WORKBENCH </dev/tty
+fi
 
 if [[ "$INSTALL_WORKBENCH" =~ ^[yY]$ ]]; then
   info "Registering claude-workbench marketplace..."
@@ -176,10 +208,14 @@ echo "  (Ask your DOMI onboarding contact for the hub host/user.)"
 echo "  (Leave host or password blank to skip — run hub-setup.sh later.)"
 echo ""
 
-read -r -p "  Hub host: " HUB_HOST
-read -r -p "  Hub user: " HUB_USER
-read -r -s -p "  Hub password: " HUB_PASS_INPUT
-echo ""
+if [[ -n "${DOMI_NONINTERACTIVE:-}" ]]; then
+  HUB_HOST="" HUB_USER="" HUB_PASS_INPUT=""
+else
+  read -r -p "  Hub host: " HUB_HOST </dev/tty
+  read -r -p "  Hub user: " HUB_USER </dev/tty
+  read -r -s -p "  Hub password: " HUB_PASS_INPUT </dev/tty
+  echo ""
+fi
 
 if [[ -z "$HUB_HOST" || -z "$HUB_USER" || -z "$HUB_PASS_INPUT" ]]; then
   warn "Host/user/password incomplete — skipping AgentHUB config. Run hub-setup.sh later to configure."
