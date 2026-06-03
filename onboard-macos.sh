@@ -205,8 +205,9 @@ ok "domi-claude-plugins done"
 
 echo ""
 info "AgentHUB connection setup — host/user/password"
-echo "  (Ask your DOMI onboarding contact for the hub host/user.)"
-echo "  (Leave host or password blank to skip — run hub-setup.sh later.)"
+echo "  Enter the hub host/user from your DOMI onboarding contact (Corey)."
+echo "  Don't have it yet? Just press Enter on all three to SKIP — you can"
+echo "  run hub-setup.sh later. (The host is an IP/hostname, NOT a command.)"
 echo ""
 
 if [[ -n "${DOMI_NONINTERACTIVE:-}" ]]; then
@@ -220,6 +221,9 @@ fi
 
 if [[ -z "$HUB_HOST" || -z "$HUB_USER" || -z "$HUB_PASS_INPUT" ]]; then
   warn "Host/user/password incomplete — skipping AgentHUB config. Run hub-setup.sh later to configure."
+elif [[ ! "$HUB_HOST" =~ ^[A-Za-z0-9._:-]+$ ]]; then
+  # Guards against pasting a URL/command into the host field (e.g. a curl line).
+  warn "Hub host '$HUB_HOST' doesn't look like a hostname/IP — skipping AgentHUB config. Run hub-setup.sh later."
 else
   info "Testing connection to ${HUB_USER}@${HUB_HOST}..."
   if sshpass -p "$HUB_PASS_INPUT" ssh -o ConnectTimeout=5 \

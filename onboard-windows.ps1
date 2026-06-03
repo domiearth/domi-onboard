@@ -222,12 +222,13 @@ Ok "domi-claude-plugins done"
 
 Write-Host ""
 Info "AgentHUB connection setup - host/user/password"
-Write-Host "  (Ask your DOMI onboarding contact for the hub host/user.)"
-Write-Host "  (Leave host or password blank to skip - run hub-setup.ps1 later.)"
+Write-Host "  Enter the hub host/user from your DOMI onboarding contact (Corey)."
+Write-Host "  Don't have it yet? Just press Enter on all three to SKIP - you can"
+Write-Host "  run hub-setup.ps1 later. (The host is an IP/hostname, NOT a command.)"
 Write-Host ""
 
-$hubHost = Read-Host "  Hub host"
-$hubUser = Read-Host "  Hub user"
+$hubHost = (Read-Host "  Hub host").Trim()
+$hubUser = (Read-Host "  Hub user").Trim()
 
 $hubPassSecure = Read-Host "  Hub password" -AsSecureString
 $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($hubPassSecure)
@@ -238,10 +239,28 @@ $configFile = "$env:USERPROFILE\.domi-hub.json"
 
 if ((-not $hubHost) -or (-not $hubUser) -or (-not $hubPass)) {
     Warn "Host/user/password incomplete - skipping AgentHUB config. Run hub-setup.ps1 later."
+} elseif ($hubHost -notmatch '^[A-Za-z0-9._:-]+$') {
+    # Guards against pasting a URL/command into the host field (e.g. a curl line).
+    Warn "Hub host '$hubHost' doesn't look like a hostname/IP - skipping AgentHUB config."
+    Warn "If you don't have a hub host yet, just press Enter at these prompts. Run hub-setup.ps1 later."
 } else {
     Info "Testing connection to ${hubUser}@${hubHost}..."
-    & sshpass -p "$hubPass" ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR "${hubUser}@${hubHost}" "echo ok" 2>$null | Out-Null
-    if ($LASTEXITCODE -eq 0) {
+    # Never let a failed/garbage connection test abort the script: sshpass.exe
+    # writes to stderr (e.g. "getsockname failed: Not a socket"), which under
+    # $ErrorActionPreference=Stop would terminate the run before the summary +
+    # guided session. Force Continue + swallow all output + try/catch.
+    $sshOk = $false
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & sshpass -p "$hubPass" ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR "${hubUser}@${hubHost}" "echo ok" 2>&1 | Out-Null
+        $sshOk = ($LASTEXITCODE -eq 0)
+    } catch {
+        $sshOk = $false
+    } finally {
+        $ErrorActionPreference = $prevEAP
+    }
+    if ($sshOk) {
         $cfg = [ordered]@{
             host = $hubHost
             user = $hubUser
@@ -258,6 +277,7 @@ if ((-not $hubHost) -or (-not $hubUser) -or (-not $hubPass)) {
         Ok "AgentHUB credentials saved to $configFile"
     } else {
         Warn "Connection test failed - credentials NOT saved. Run hub-setup.ps1 after fixing network."
+        Warn "(sshpass can be flaky on Windows; configuring the hub later via hub-setup.ps1 is fine.)"
     }
 }
 
