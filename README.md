@@ -26,6 +26,10 @@
 
 ### 🍎 我用的是 Mac
 
+> ⚠️ **先確認你的 macOS 版本：建議 macOS 13 (Ventura) 以上。**
+> 點左上角  → 「關於這台 Mac」看版本。**低於 13（例如 macOS 12 Monterey）會卡很久**——因為 Homebrew 不再支援舊系統，工具得從原始碼慢慢編譯（可能拖到一小時，看起來像當機其實沒當）。
+> 請先到「系統設定 → 軟體更新」**升級到最新可用版本再跑**；若你的機型升不上去，請找 onboarding 窗口或 Corey。
+
 **第 1 步：打開「終端機」(Terminal)**
 
 1. 按鍵盤 `⌘ Command` + `空白鍵`，右上角會跳出搜尋框（這叫 Spotlight）。
@@ -98,7 +102,7 @@ curl -fsSL https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard
 
 ### 前置需求
 
-- macOS 11+ (Big Sur 以上)
+- **macOS 13 (Ventura) 以上**（建議跑最新可用版本）。低於 13（如 macOS 12 Monterey）被 Homebrew 列為 [Tier 3](https://docs.brew.sh/Support-Tiers#tier-3) 不支援，多數套件會**從原始碼編譯、非常慢**，請先升級再跑；機型升不上去的個案請找 onboarding 窗口。
 - 有 admin 權限的帳號（裝 Homebrew / Cask 會用到）
 - 已加入 `domiearth` GitHub org（script 中會跑 `gh auth login` 引導登入）
 
