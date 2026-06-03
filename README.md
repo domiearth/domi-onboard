@@ -14,27 +14,83 @@
 
 > 新人導覽 session 的教學腳本獨立放在 [`TUTOR_PLAYBOOK.md`](./TUTOR_PLAYBOOK.md)；三個 onboarding script 在 Step 11 都會自動載入它（本機有副本就讀檔，否則抓 GitHub 上的最新版）。**要改教學內容只改這一個檔即可，不用動 script。**
 
-### 快速開始（一行下載 + 執行）
+## 🚀 快速開始（非技術同仁看這裡，照做就好）
 
-**macOS**（Terminal，**勿加 `sudo`**）：
+你只要做三件事：**①打開一個叫「終端機」的視窗 → ②把一行指令貼進去 → ③按 Enter，然後等它跑完。**
+全程不用懂程式，看到問題（例如要你輸入密碼、按 Enter）就照提示做即可。
+
+> 💡 什麼是「指令」？就是下面那一長串文字。你不用自己打，**整段複製、貼上、按 Enter** 就好。
+> 💡 跑的過程會洗出很多字，那是正常的，代表它在工作。整個過程大概 10～30 分鐘（看網路）。
+
+---
+
+### 🍎 我用的是 Mac
+
+**第 1 步：打開「終端機」(Terminal)**
+
+1. 按鍵盤 `⌘ Command` + `空白鍵`，右上角會跳出搜尋框（這叫 Spotlight）。
+2. 輸入 `terminal`，按 `Enter`。
+3. 會跳出一個白色或黑色的視窗——這就是終端機，等你輸入指令。
+
+**第 2 步：複製下面這一整行**（點右上角的複製鈕，或整行反白後 `⌘ Command` + `C`）
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-macos.sh -o ~/onboard-macos.sh && bash ~/onboard-macos.sh
 ```
 
-**Windows**（**admin** PowerShell）：
+**第 3 步：回到終端機視窗，貼上並執行**
+
+1. 在終端機裡按 `⌘ Command` + `V` 貼上（指令會整行出現）。
+2. 按 `Enter` 開始跑。
+3. 中途如果要你輸入**開機/登入用的密碼**：直接打你的 Mac 密碼按 Enter（⚠️ 打字時畫面**不會顯示任何字**，這是正常的，打完按 Enter 就好）。
+4. 看到問你問題時（例如 `[y/N]`、要不要裝某東西），照下方「注意事項」說明回答，不確定就直接按 `Enter`。
+
+> ⚠️ **千萬不要在前面自己加 `sudo`**。直接貼上面那行就好。
+
+---
+
+### 🪟 我用的是 Windows
+
+**第 1 步：用「系統管理員」打開 PowerShell**（這步很重要，少了會裝不起來）
+
+1. 按鍵盤左下角的 `⊞ 視窗鍵`（或點開始功能表）。
+2. 輸入 `powershell`。
+3. 在搜尋結果的「Windows PowerShell」上**按右鍵 → 選「以系統管理員身分執行」**。
+4. 跳出「是否允許變更」就按「**是**」。會開一個藍色（或黑色）視窗——這就是 PowerShell。
+
+**第 2 步：複製下面這一整行**（點右上角複製鈕，或反白後 `Ctrl` + `C`）
 
 ```powershell
 $f="$env:TEMP\onboard-windows.ps1"; irm https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-windows.ps1 -OutFile $f; powershell -ExecutionPolicy Bypass -File $f
 ```
 
-**AgentHUB**（SSH 進 server 後）：
+**第 3 步：回到 PowerShell 視窗，貼上並執行**
+
+1. 在 PowerShell 視窗裡**按滑鼠右鍵**就會自動貼上（或按 `Ctrl` + `V`）。
+2. 按 `Enter` 開始跑。
+3. 中途若彈出視窗問「是否允許安裝」就按「**是 / 允許**」；問你問題時照下方「注意事項」回答，不確定就按 `Enter`。
+
+> ⚠️ 如果忘了用「系統管理員」開，看到紅字錯誤是正常的——關掉視窗，回第 1 步重開一次。
+
+---
+
+### 🖥️ AgentHUB（公司共用主機）
+
+這台是進階用法，**通常會有人帶你**。先用 SSH 連進主機，再貼這行：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-agenthub.sh -o ~/onboard-agenthub.sh && bash ~/onboard-agenthub.sh
 ```
 
-> 各平台的前置需求、執行原則、注意事項見下方對應章節。
+---
+
+### ✅ 跑完之後會怎樣？
+
+裝到最後，畫面會問你「**要不要開一個導覽 session？**」——**按 `Enter` 就對了**。
+接著 Claude 會用中文**一步一步**教你怎麼用工具、怎麼把專案抓下來。跟著它做就好；想結束就輸入 `/exit`。
+
+> 卡住了？最常見的兩個狀況（Mac 看起來「不動」、Windows 紅字錯誤）在最下面的 [Troubleshooting](#troubleshooting) 有解法；真的不行就找你的 onboarding 窗口或 Corey。
+> 各平台的詳細前置需求、進階執行方式見下方對應章節。
 
 ---
 
