@@ -12,6 +12,8 @@
 
 跑完會裝好：git、gh CLI、Node.js 22、Claude Code CLI、Claude Desktop、sshpass、DOMI marketplace + 5 個 plugin（含 hub-relay），並設定好 AgentHUB 連線。
 
+> 新人導覽 session 的教學腳本獨立放在 [`TUTOR_PLAYBOOK.md`](./TUTOR_PLAYBOOK.md)；三個 onboarding script 在 Step 11 都會自動載入它（本機有副本就讀檔，否則抓 GitHub 上的最新版）。**要改教學內容只改這一個檔即可，不用動 script。**
+
 ### 快速開始（一行下載 + 執行）
 
 **macOS**（Terminal，**勿加 `sudo`**）：
