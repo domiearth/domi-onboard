@@ -1,15 +1,21 @@
-# ──────────────────────────────────────────────────────────────
-# DOMI onboarding — Windows (PowerShell 5.1+)
+# --------------------------------------------------------------
+# DOMI onboarding - Windows (PowerShell 5.1+)
 # Usage: Run as Administrator
 #   Set-ExecutionPolicy Bypass -Scope Process -Force
 #   .\onboard-windows.ps1
-# ──────────────────────────────────────────────────────────────
+#
+# !! KEEP THIS FILE PURE ASCII !!  Windows PowerShell 5.1 reads a BOM-less
+# download (what `irm -OutFile` produces) as the system ANSI codepage, so any
+# non-ASCII char (Chinese, emoji, box-drawing) corrupts string parsing and the
+# script won't even load. All localized text lives in TUTOR_PLAYBOOK.md and is
+# fetched at runtime, never parsed by PowerShell.
+# --------------------------------------------------------------
 
 $ErrorActionPreference = "Stop"
 
 $DOMI_PROJECT_DIR = "$env:USERPROFILE\project"
 
-# ── helpers ──────────────────────────────────────────────────
+# -- helpers --------------------------------------------------
 
 function Info  { Write-Host "[INFO]  $args" -ForegroundColor Cyan }
 function Ok    { Write-Host "[OK]    $args" -ForegroundColor Green }
@@ -31,14 +37,14 @@ function Refresh-Path {
                 [System.Environment]::GetEnvironmentVariable("Path", "User")
 }
 
-# ── 0. Check winget ──────────────────────────────────────────
+# -- 0. Check winget ------------------------------------------
 
 Info "Checking winget..."
 if (-not (Test-Command "winget")) {
     Fail "winget not found. Please install App Installer from Microsoft Store first."
 }
 
-# ── 1. Git ───────────────────────────────────────────────────
+# -- 1. Git ---------------------------------------------------
 
 Info "Checking git..."
 if (-not (Test-Command "git")) {
@@ -52,7 +58,7 @@ if (Test-Command "git") {
     Warn "git installed but not in PATH yet. Restart terminal after script completes."
 }
 
-# ── 2. GitHub CLI ────────────────────────────────────────────
+# -- 2. GitHub CLI --------------------------------------------
 
 Info "Checking GitHub CLI..."
 if (-not (Test-Command "gh")) {
@@ -64,7 +70,7 @@ if (Test-Command "gh") {
     Ok "gh $(gh --version | Select-Object -First 1)"
 }
 
-# ── 3. Node.js ───────────────────────────────────────────────
+# -- 3. Node.js -----------------------------------------------
 
 Info "Checking Node.js..."
 if (-not (Test-Command "node")) {
@@ -83,7 +89,7 @@ if (Test-Command "node") {
     Warn "Node.js installed but not in PATH yet. Restart terminal after script completes."
 }
 
-# ── 4. Claude Code CLI ──────────────────────────────────────
+# -- 4. Claude Code CLI --------------------------------------
 
 Info "Checking Claude Code CLI..."
 if (-not (Test-Command "claude")) {
@@ -97,7 +103,7 @@ if (Test-Command "claude") {
     Warn "Claude CLI installed but not in PATH yet. Restart terminal after script completes."
 }
 
-# ── 4b. Scoop + sshpass (required by hub-relay) ─────────────
+# -- 4b. Scoop + sshpass (required by hub-relay) -------------
 
 Info "Checking Scoop..."
 if (-not (Test-Command "scoop")) {
@@ -125,7 +131,7 @@ if (Test-Command "sshpass") {
     Warn "sshpass install may need a terminal restart"
 }
 
-# ── 5. Claude Desktop ───────────────────────────────────────
+# -- 5. Claude Desktop ---------------------------------------
 
 Info "Checking Claude Desktop..."
 $claudeDesktop = Get-Command "Claude" -ErrorAction SilentlyContinue
@@ -149,7 +155,7 @@ if ($claudeDesktop -or (Test-Path $claudeDesktopPath)) {
     }
 }
 
-# ── 6. GitHub authentication ────────────────────────────────
+# -- 6. GitHub authentication --------------------------------
 
 Info "Checking GitHub auth..."
 $authStatus = gh auth status 2>&1
@@ -160,12 +166,12 @@ if ($LASTEXITCODE -eq 0) {
     gh auth login
 }
 
-# ── 7. Project directory ────────────────────────────────────
+# -- 7. Project directory ------------------------------------
 
 Info "Setting up project directory: $DOMI_PROJECT_DIR"
 New-Item -ItemType Directory -Force -Path $DOMI_PROJECT_DIR | Out-Null
 
-# ── 8. claude-workbench (optional) ──────────────────────────
+# -- 8. claude-workbench (optional) --------------------------
 
 Write-Host ""
 Info "claude-workbench - Kirin's productivity plugins (mentor, kanban, chat)"
@@ -191,7 +197,7 @@ if ($installWB -match '^[yY]$') {
     Info "Skipping claude-workbench"
 }
 
-# ── 9. domi-claude-plugins (required, via marketplace) ─────
+# -- 9. domi-claude-plugins (required, via marketplace) -----
 
 Write-Host ""
 Info "domi-claude-plugins - DOMI governance plugins (REQUIRED)"
@@ -212,7 +218,7 @@ foreach ($plugin in @("stack-guard", "entity-guard", "domi-init", "schema-change
 }
 Ok "domi-claude-plugins done"
 
-# ── 9b. AgentHUB connection setup ───────────────────────────
+# -- 9b. AgentHUB connection setup ---------------------------
 
 Write-Host ""
 Info "AgentHUB connection setup - host/user/password"
@@ -255,10 +261,10 @@ if ((-not $hubHost) -or (-not $hubUser) -or (-not $hubPass)) {
     }
 }
 
-# ── 10. Summary ─────────────────────────────────────────────
+# -- 10. Summary ---------------------------------------------
 
 Write-Host ""
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor White
+Write-Host "------------------------------------------------------" -ForegroundColor White
 Ok "DOMI onboarding complete!"
 Write-Host ""
 Write-Host "  Installed:"
@@ -268,13 +274,13 @@ try { Write-Host "    node         $(node --version)" } catch { Write-Host "    
 try { Write-Host "    claude CLI   installed" } catch { Write-Host "    claude CLI   (restart terminal)" }
 Write-Host ""
 Write-Host "  Plugins (via domi-claude-plugins marketplace):"
-Write-Host "    stack-guard    ✅  TECH_STACK.md enforcement"
-Write-Host "    entity-guard   ✅  Local vs Global/MT-DAO boundary"
-Write-Host "    domi-init      ✅  repo bootstrap with CLAUDE.md templates"
-Write-Host "    schema-change  ✅  datahouse cross-repo coordination"
-Write-Host "    hub-relay      ✅  SSH bridge to AgentHUB"
+Write-Host "    stack-guard    [OK]  TECH_STACK.md enforcement"
+Write-Host "    entity-guard   [OK]  Local vs Global/MT-DAO boundary"
+Write-Host "    domi-init      [OK]  repo bootstrap with CLAUDE.md templates"
+Write-Host "    schema-change  [OK]  datahouse cross-repo coordination"
+Write-Host "    hub-relay      [OK]  SSH bridge to AgentHUB"
 if ($installWB -match '^[yY]$') {
-    Write-Host "    claude-workbench     ✅ (mentor, kanban, chat)"
+    Write-Host "    claude-workbench     [OK] (mentor, kanban, chat)"
 }
 Write-Host ""
 Write-Host "  Next steps:"
@@ -282,13 +288,13 @@ Write-Host "    1. Open Claude Desktop and sign in"
 Write-Host "    2. Run: cd $DOMI_PROJECT_DIR; gh repo clone domiearth/foreman"
 Write-Host "    3. Run: cd foreman; claude   # start your first session"
 Write-Host "    4. (If skipped above) run hub-setup.ps1 to configure AgentHUB later"
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor White
+Write-Host "------------------------------------------------------" -ForegroundColor White
 
 Write-Host ""
 Warn "If any tools show 'restart terminal', close and reopen PowerShell, then verify with:"
 Write-Host "    git --version && gh --version && node --version && claude --version"
 
-# ── 11. Guided first session (optional) ─────────────────────
+# -- 11. Guided first session (optional) ---------------------
 # Hand off into a live Claude Code session that tutors the new hire through
 # the claude CLI and gh (clone a project), one step at a time. Skipped if the
 # claude CLI isn't on PATH yet (needs a terminal restart after install).
@@ -305,7 +311,10 @@ if (-not $TUTOR_PROMPT) {
     try { $TUTOR_PROMPT = Invoke-RestMethod -Uri $DOMI_PLAYBOOK_URL } catch {}
 }
 if (-not $TUTOR_PROMPT -or -not $TUTOR_PROMPT.Trim()) {
-    $TUTOR_PROMPT = "你是 DOMI 新人 onboarding 導師,請用繁體中文一步一步帶我(一次一步,等我回覆再繼續)熟悉:Claude Desktop 與 Claude Code CLI 的差別、設定 Claude Desktop(登入資訊請我聯絡 Corey)、用 gh 把 domiearth/foreman clone 到 ~\project、以及 git repo / agent / agent workspace 的關係。"
+    # ASCII-only fallback (this file must stay ASCII for Windows PowerShell 5.1,
+    # which reads BOM-less downloads as the system ANSI codepage). The real
+    # Traditional-Chinese playbook is fetched from TUTOR_PLAYBOOK.md above.
+    $TUTOR_PROMPT = "You are the DOMI new-hire onboarding tutor. Teach me in Traditional Chinese, one step at a time (wait for my reply before continuing): (1) Claude Desktop vs the Claude Code CLI; (2) setting up Claude Desktop -- for login credentials tell me to contact Corey; (3) cloning domiearth/foreman with gh into my project folder; (4) the relationship between a git repo, an agent, and an agent workspace."
 }
 
 if (Get-Command claude -ErrorAction SilentlyContinue) {

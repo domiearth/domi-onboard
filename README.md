@@ -335,6 +335,15 @@ source ~/.zprofile
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-windows.ps1" -OutFile onboard-windows.ps1
 ```
 
+### Windows：一執行就紅字 `未預期的 'Start' 語彙基元` / `字串遺漏結尾字元`
+
+代表你拿到的是**含中文字元的舊版** `.ps1`。Windows PowerShell 5.1 會把沒有 BOM 的下載檔當成系統 ANSI 編碼(繁中機是 Big5/cp950)讀，於是中文被讀壞、script 根本載不進去。最新版的 `.ps1` 已改成**純 ASCII**(中文教學移到 `TUTOR_PLAYBOOK.md`，執行時才抓)，重新用上方「一行下載 + 執行」跑一次即可。確認自己是不是舊版:
+
+```powershell
+# 重新抓最新版再跑
+$f="$env:TEMP\onboard-windows.ps1"; irm https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-windows.ps1 -OutFile $f; powershell -ExecutionPolicy Bypass -File $f
+```
+
 ### Windows：`scoop : 無法辨識……名稱`
 
 Scoop 裝完後 PATH 未刷新。**重開 PowerShell** 再跑一次 script，或手動：
