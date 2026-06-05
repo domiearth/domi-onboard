@@ -10,9 +10,13 @@
 | [`onboard-windows.ps1`](./onboard-windows.ps1) | Windows 10/11（PowerShell 5.1+） | 個人 dev 機 |
 | [`onboard-agenthub.sh`](./onboard-agenthub.sh) | Ubuntu 22.04+ / 24.04 LTS | **AgentHUB server**（同仁透過 SSH 進來開發） |
 
-跑完會裝好：git、gh CLI、Node.js 22、Claude Code CLI、Claude Desktop、sshpass、DOMI marketplace + 5 個 plugin（含 hub-relay），並設定好 AgentHUB 連線。
+跑完會裝好：git、gh CLI、Node.js 22、Claude Code CLI、Claude Desktop、sshpass、DOMI marketplace + 7 個 plugin（含 hub-relay、project-protect、domi-guide），並設定好 AgentHUB 連線。
 
-> 新人導覽 session 的教學腳本獨立放在 [`TUTOR_PLAYBOOK.md`](./TUTOR_PLAYBOOK.md)；三個 onboarding script 在 Step 11 都會自動載入它（本機有副本就讀檔，否則抓 GitHub 上的最新版）。**要改教學內容只改這一個檔即可，不用動 script。**
+> **新人導覽 = `domi-guide` plugin 的 `/guide` 指令**（2026-06-05 起）。onboarding script 最後一步會自動開
+> `claude "/guide all"` 跑完整教學（主題 0–7）；之後**忘了任何一章，在任何 Claude Code session 打
+> `/guide` 就會從上次進度繼續、`/guide <章名或編號>` 直接跳章** —— 不用重跑 script、不用重看前面。
+> **要改教學內容請改 plugin**（`domi-claude-plugins/plugins/domi-guide/commands/guide.md`）；
+> 本 repo 的 [`TUTOR_PLAYBOOK.md`](./TUTOR_PLAYBOOK.md) 降為離線 fallback（plugin 沒裝成功時才用）。
 
 ## 🚀 快速開始（非技術同仁看這裡，照做就好）
 
