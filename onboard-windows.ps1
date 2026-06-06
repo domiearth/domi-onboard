@@ -212,7 +212,7 @@ if ($marketplaceList -match "domi-claude-plugins") {
 }
 
 Info "Installing DOMI plugins from marketplace..."
-foreach ($plugin in @("stack-guard", "entity-guard", "domi-init", "schema-change", "hub-relay")) {
+foreach ($plugin in @("stack-guard", "entity-guard", "domi-init", "schema-change", "hub-relay", "project-protect", "domi-guide")) {
     Info "  Installing $plugin..."
     try { claude plugin install "${plugin}@domi-claude-plugins" 2>$null } catch { Warn "  $plugin skipped (may already be installed)" }
 }
@@ -319,11 +319,19 @@ Write-Host "    git --version && gh --version && node --version && claude --vers
 # the claude CLI and gh (clone a project), one step at a time. Skipped if the
 # claude CLI isn't on PATH yet (needs a terminal restart after install).
 
-# Load the tutor playbook: prefer a copy next to this script (clone / offline),
-# else fetch the published copy, else fall back to a short inline prompt.
+# Tutor source, in priority order:
+#   1. domi-guide plugin (canonical) - re-enterable any time later with /guide,
+#      remembers progress, can jump to single chapters
+#   2. local TUTOR_PLAYBOOK.md copy (clone / offline fallback)
+#   3. published TUTOR_PLAYBOOK.md from GitHub
+#   4. short inline ASCII prompt
 $DOMI_PLAYBOOK_URL = "https://raw.githubusercontent.com/domiearth/domi-onboard/main/TUTOR_PLAYBOOK.md"
 $TUTOR_PROMPT = $null
-if ($PSScriptRoot) {
+try {
+    $pluginList = claude plugin list 2>&1
+    if ($pluginList -match "domi-guide") { $TUTOR_PROMPT = "/guide all" }
+} catch {}
+if (-not $TUTOR_PROMPT -and $PSScriptRoot) {
     $localPlaybook = Join-Path $PSScriptRoot "TUTOR_PLAYBOOK.md"
     if (Test-Path $localPlaybook) { $TUTOR_PROMPT = Get-Content -Raw -Encoding UTF8 $localPlaybook }
 }
@@ -345,7 +353,7 @@ if (Get-Command claude -ErrorAction SilentlyContinue) {
         Write-Host ""
         claude $TUTOR_PROMPT
     } else {
-        Info "Skipped guided session. Start one anytime with:  cd $DOMI_PROJECT_DIR; claude"
+        Info "Skipped guided session. Start anytime: open any claude session and type  /guide"
     }
 } else {
     Info "claude CLI not on PATH yet - restart PowerShell, then start a session with:"

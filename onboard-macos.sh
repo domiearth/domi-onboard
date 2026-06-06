@@ -194,7 +194,7 @@ else
 fi
 
 info "Installing DOMI plugins from marketplace..."
-for plugin in stack-guard entity-guard domi-init schema-change hub-relay; do
+for plugin in stack-guard entity-guard domi-init schema-change hub-relay project-protect domi-guide; do
   info "  Installing $plugin..."
   claude plugin install "${plugin}@domi-claude-plugins" 2>/dev/null \
     || warn "  $plugin install skipped (may already be installed)"
@@ -278,10 +278,16 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 # the claude CLI and gh (clone a project), one step at a time. Skipped when
 # non-interactive or if the claude CLI isn't on PATH yet.
 
-# Load the tutor playbook: prefer a copy next to this script (clone / offline),
-# else fetch the published copy, else fall back to a short inline prompt.
+# Tutor source, in priority order:
+#   1. domi-guide plugin (canonical) — re-enterable any time later with /guide,
+#      remembers progress in ~/.domi-guide.json, can jump to single chapters
+#   2. local TUTOR_PLAYBOOK.md copy (clone / offline fallback)
+#   3. published TUTOR_PLAYBOOK.md from GitHub
+#   4. short inline prompt
 _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || true)"
-if [[ -n "$_script_dir" && -r "$_script_dir/TUTOR_PLAYBOOK.md" ]]; then
+if claude plugin list 2>/dev/null | grep -q "domi-guide"; then
+  TUTOR_PROMPT="/guide all"
+elif [[ -n "$_script_dir" && -r "$_script_dir/TUTOR_PLAYBOOK.md" ]]; then
   TUTOR_PROMPT="$(cat "$_script_dir/TUTOR_PLAYBOOK.md")"
 else
   TUTOR_PROMPT="$(curl -fsSL "$DOMI_PLAYBOOK_URL" 2>/dev/null || true)"
@@ -299,5 +305,5 @@ if [[ -z "${DOMI_NONINTERACTIVE:-}" ]] && command -v claude &>/dev/null; then
     echo ""
     exec claude "$TUTOR_PROMPT" </dev/tty
   fi
-  info "Skipped guided session. Start one anytime with:  cd $DOMI_PROJECT_DIR && claude"
+  info "Skipped guided session. Start anytime: open any claude session and type  /guide"
 fi
