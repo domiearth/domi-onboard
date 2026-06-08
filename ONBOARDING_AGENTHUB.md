@@ -24,8 +24,10 @@ Script idempotent — 已裝的會跳過,重複跑安全。
 - **pnpm**(via corepack)
 - **uv**(Python toolkit manager → `~/.local/bin`)
 - **Rust** stable(via rustup → `~/.cargo`)
+- **Claude Code CLI**(npm global → `~/.local`)
 
 **Part B — System-level**(需 sudo prompt):
+- **GitHub CLI(`gh`)** — 官方 apt repo;**B2 私庫 marketplace 的前提**
 - `build-essential`(make / gcc / linker)
 - `shellcheck`(per TECH_STACK §6.2 MUST)
 - `sshpass`、`postgresql-client`、`tmux`
@@ -33,6 +35,7 @@ Script idempotent — 已裝的會跳過,重複跑安全。
 > Part B 在非互動環境(如直接被 Claude Code Bash tool 呼叫)會 graceful fail,請用 SSH **互動 shell** 跑。
 
 **Part B2 — Governance plugins(hub 端把關)**:
+- **先確保 `gh auth`**(私庫 marketplace 需 `domiearth` org 存取)— 沒認證會引導 `gh auth login`(互動 shell)或提示設 `GH_TOKEN`
 - 裝 `stack-guard` · `entity-guard` · `schema-change` · `project-protect` · `domi-init` · `domi-guide`
 - **不裝** `hub-relay`(hub 自己不連自己)與 `individual-agent`(hub 上無個人 repo)
 - 條件式:偵測到 `claude` CLI 才裝;沒裝 claude 會提示手動步驟
