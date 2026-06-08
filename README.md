@@ -6,7 +6,8 @@
 
 | 你的機器 | 看這份 |
 |---|---|
-| 🍎 **Mac** | **[ONBOARDING_MACOS.md](./ONBOARDING_MACOS.md)** |
+| 🍎 **Mac(macOS 13+)** | **[ONBOARDING_MACOS.md](./ONBOARDING_MACOS.md)** |
+| 🍎 **Mac(macOS 12 Monterey)** | **[ONBOARDING_MACOS_12.md](./ONBOARDING_MACOS_12.md)** |
 | 🪟 **Windows** | **[ONBOARDING_WINDOWS.md](./ONBOARDING_WINDOWS.md)** |
 | 🖥️ **AgentHUB**(共用主機,通常有人帶) | **[ONBOARDING_AGENTHUB.md](./ONBOARDING_AGENTHUB.md)** |
 

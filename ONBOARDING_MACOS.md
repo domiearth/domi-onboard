@@ -1,7 +1,8 @@
-# 🍎 macOS 新人環境設定
+# 🍎 macOS 13+ 新人環境設定
 
-> DOMI Claude agent 開發環境 —— **Mac 專用**。照這份從上到下做一遍即可,做完直接看
-> 最後的 [✅ 裝完之後做什麼](#-裝完之後做什麼) 接著往下。
+> DOMI Claude agent 開發環境 —— **macOS 13 (Ventura) 以上專用**。照這份從上到下做一遍即可,
+> 做完直接看最後的 [✅ 裝完之後做什麼](#-裝完之後做什麼) 接著往下。
+> **macOS 12 (Monterey)** 請改用 [`ONBOARDING_MACOS_12.md`](./ONBOARDING_MACOS_12.md)(專用 script,不卡編譯)。
 > Windows 同仁請看 [`ONBOARDING_WINDOWS.md`](./ONBOARDING_WINDOWS.md)。
 
 ---
@@ -14,12 +15,8 @@
 > 💡 跑的過程會洗出很多字,正常的,代表它在工作。整個過程約 10～30 分鐘(看網路)。
 
 > ⚠️ **先確認 macOS 版本:點左上角  → 「關於這台 Mac」看版本。**
-> - **macOS 13 (Ventura) 以上** → 用上面那行(`onboard-macos.sh`,走 Homebrew)。
-> - **macOS 12 (Monterey)、且升不上去** → 改用**專用 script**(不用 Homebrew,避開漫長編譯):
->   ```bash
->   curl -fsSL https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-macos-12.sh -o ~/onboard-macos-12.sh && bash ~/onboard-macos-12.sh
->   ```
-> - 能升級就先到「系統設定 → 軟體更新」升到 13+ 再跑(最省事);機型升不上去找 Corey。
+> 這份適用 **macOS 13 (Ventura) 以上**。若你是 **macOS 12 (Monterey)** → 改看
+> [`ONBOARDING_MACOS_12.md`](./ONBOARDING_MACOS_12.md)(專用 script,不卡編譯)。能升級就先升到 13+ 最省事。
 
 **第 1 步:打開「終端機」(Terminal)**
 
@@ -150,7 +147,7 @@ source ~/.zprofile
 ### 跑 onboarding「卡住」/ log 噴出 script 原始碼
 
 1. **用了 `sudo curl … | bash`** — root + pipe 跑壞:互動 `read` 讀不到鍵盤,子程序吃掉 pipe 裡未執行的 script。**解法**:拿掉 `sudo`,先下載再跑。
-2. **`==> ./make.bash` 停很久不是當機** — 舊 macOS(如 12)被列 Tier 3,`go` 只能從原始碼編譯,十幾分鐘正常。耐心等或升級 macOS。
+2. **brew 在編譯、停很久** — 你可能其實是 macОS 12(被 Homebrew 列 Tier 3,從源碼編譯)。改用 [`ONBOARDING_MACOS_12.md`](./ONBOARDING_MACOS_12.md) 的專用 script(不用 Homebrew)。
 
 ### `claude plugin marketplace add` 顯示 404
 
