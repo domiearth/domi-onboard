@@ -84,7 +84,7 @@ Set-ExecutionPolicy Bypass -Scope Process -Force
 - **gh auth login 走瀏覽器** — 跟著 prompt。
 - **裝哪些 plugin** — 個人機只裝 `individual-agent` · `hub-relay` · `domi-guide`(治理 guard 在 hub 端把關)。詳見 [README 安裝矩陣](./README.md#plugin-安裝矩陣)。
 - **AgentHUB 連線設定** — Step 9b 問 host / user / password / **你的 GitHub 帳號**(身分,務必填);host / user 跟 onboarding 窗口索取。留空可跳過,稍後再跑 `hub-setup.ps1`。
-- **新人導覽** — 最後一步會問要不要開導覽 session(`/guide`),**按 Enter 就對了**。跳過也沒關係,見下方。
+- **新人導覽** — 最後一步會問要不要開導覽,**按 Enter 就對了**,教學會自動開始(沒開始就在 session 內打 `/guide`)。跳過也沒關係,見下方。
 
 ---
 
