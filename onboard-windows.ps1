@@ -268,47 +268,38 @@ Warn "If any tools show 'restart terminal', close and reopen PowerShell, then ve
 Write-Host "    git --version && gh --version && node --version && claude --version"
 
 # -- 11. Guided first session (optional) ---------------------
-# Hand off into a live Claude Code session that tutors the new hire through
-# the claude CLI and gh (clone a project), one step at a time. Skipped if the
-# claude CLI isn't on PATH yet (needs a terminal restart after install).
-
-# Tutor source, in priority order:
-#   1. domi-guide plugin (canonical) - re-enterable any time later with /guide,
-#      remembers progress, can jump to single chapters
-#   2. local TUTOR_PLAYBOOK.md copy (clone / offline fallback)
-#   3. published TUTOR_PLAYBOOK.md from GitHub
-#   4. short inline ASCII prompt
-$DOMI_PLAYBOOK_URL = "https://raw.githubusercontent.com/domiearth/domi-onboard/main/TUTOR_PLAYBOOK.md"
-$TUTOR_PROMPT = $null
-try {
-    $pluginList = claude plugin list 2>&1
-    if ($pluginList -match "domi-guide") { $TUTOR_PROMPT = "/guide all" }
-} catch {}
-if (-not $TUTOR_PROMPT -and $PSScriptRoot) {
-    $localPlaybook = Join-Path $PSScriptRoot "TUTOR_PLAYBOOK.md"
-    if (Test-Path $localPlaybook) { $TUTOR_PROMPT = Get-Content -Raw -Encoding UTF8 $localPlaybook }
-}
-if (-not $TUTOR_PROMPT) {
-    try { $TUTOR_PROMPT = Invoke-RestMethod -Uri $DOMI_PLAYBOOK_URL } catch {}
-}
-if (-not $TUTOR_PROMPT -or -not $TUTOR_PROMPT.Trim()) {
-    # ASCII-only fallback (this file must stay ASCII for Windows PowerShell 5.1,
-    # which reads BOM-less downloads as the system ANSI codepage). The real
-    # Traditional-Chinese playbook is fetched from TUTOR_PLAYBOOK.md above.
-    $TUTOR_PROMPT = "You are the DOMI new-hire onboarding tutor. Teach me in Traditional Chinese, one step at a time (wait for my reply before continuing): (1) Claude Desktop vs the Claude Code CLI; (2) setting up Claude Desktop -- for login credentials tell me to contact Corey; (3) cloning domiearth/foreman with gh into my project folder; (4) the relationship between a git repo, an agent, and an agent workspace."
+# Open an interactive Claude session in the user's personal repo so they can
+# start the tutorial by typing /guide.
+#
+# IMPORTANT: Claude Code has NO way to run a slash command at startup -
+# `claude "/guide all"` is parsed as an unknown command. Slash commands only
+# resolve when typed INSIDE an interactive session. So we drop the user into a
+# clean interactive session and tell them to type /guide (not auto-run it).
+$tutorDir = $DOMI_PROJECT_DIR
+if ($ghHandle -and (Test-Path "$DOMI_PROJECT_DIR\agent-$ghHandle\.git")) {
+    $tutorDir = "$DOMI_PROJECT_DIR\agent-$ghHandle"   # start in your personal repo
 }
 
 if (Get-Command claude -ErrorAction SilentlyContinue) {
     Write-Host ""
-    $startTutorial = Read-Host "  Start a guided Claude session to learn the claude CLI + gh? [Y/n]"
+    $startTutorial = Read-Host "  Start a guided Claude session now? [Y/n]"
     if ($startTutorial -notmatch '^[nN]$') {
-        Info "Launching guided session - follow along, type /exit when done."
         Write-Host ""
-        claude $TUTOR_PROMPT
+        Write-Host "------------------------------------------------------" -ForegroundColor White
+        Write-Host "  Session opens next - type this to start the tutorial:"
+        Write-Host ""
+        Write-Host "        /guide"
+        Write-Host ""
+        Write-Host "  (any session later can run /guide to resume; /exit to leave)"
+        Write-Host "  If /guide shows 'Unknown command', the domi-guide plugin did not install:"
+        Write-Host "     claude plugin install domi-guide@domi-claude-plugins   (or ask Corey)"
+        Write-Host "------------------------------------------------------" -ForegroundColor White
+        Write-Host ""
+        Set-Location $tutorDir
+        claude
     } else {
-        Info "Skipped guided session. Start anytime: open any claude session and type  /guide"
+        Info "Skipped guided session. Start anytime: open a claude session and type  /guide"
     }
 } else {
-    Info "claude CLI not on PATH yet - restart PowerShell, then start a session with:"
-    Write-Host "    cd $DOMI_PROJECT_DIR; claude"
+    Info "claude CLI not on PATH yet - restart PowerShell, then: cd $DOMI_PROJECT_DIR; claude"
 }

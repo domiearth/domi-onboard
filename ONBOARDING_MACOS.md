@@ -69,7 +69,7 @@ curl -fsSL https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard
 - **gh auth login 是互動式** — 跟著 prompt(建議 HTTPS + browser 認證)。
 - **裝哪些 plugin** — 個人機只裝 `individual-agent` · `hub-relay` · `domi-guide`(治理 guard 在 hub 端把關,個人機不裝)。詳見 [README 安裝矩陣](./README.md#plugin-安裝矩陣)。
 - **AgentHUB 連線設定** — Step 9b 問 host / user / password / **你的 GitHub 帳號**(身分,務必填);host / user 跟 onboarding 窗口索取。全部留空可跳過,稍後再跑 `hub-setup.sh`。
-- **新人導覽** — 最後一步(Step 11)會問要不要開導覽 session(`/guide`),**按 Enter 就對了**,Claude 會用中文一步一步帶你跑過工具與流程。跳過也沒關係,見下方。
+- **新人導覽** — 最後一步(Step 11)會問要不要開 Claude session,**按 Enter 就對了**;session 開啟後**自己輸入 `/guide`** 開始教學(Claude Code 的 slash 指令只能在 session 內手打,無法自動跑)。Claude 會用中文一步一步帶你跑過工具與流程。跳過也沒關係,見下方。
 
 ---
 

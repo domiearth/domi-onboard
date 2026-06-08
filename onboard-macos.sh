@@ -9,7 +9,6 @@ set -euo pipefail
 
 DOMI_PROJECT_DIR="$HOME/project"
 DOMI_ONBOARD_URL="https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-macos.sh"
-DOMI_PLAYBOOK_URL="https://raw.githubusercontent.com/domiearth/domi-onboard/main/TUTOR_PLAYBOOK.md"
 
 # ── helpers ──────────────────────────────────────────────────
 
@@ -266,36 +265,35 @@ echo "    4. (If skipped above) run /hub setup to configure AgentHUB later"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # ── 11. Guided first session (optional) ─────────────────────
-# Hand off into a live Claude Code session that tutors the new hire through
-# the claude CLI and gh (clone a project), one step at a time. Skipped when
-# non-interactive or if the claude CLI isn't on PATH yet.
-
-# Tutor source, in priority order:
-#   1. domi-guide plugin (canonical) — re-enterable any time later with /guide,
-#      remembers progress in ~/.domi-guide.json, can jump to single chapters
-#   2. local TUTOR_PLAYBOOK.md copy (clone / offline fallback)
-#   3. published TUTOR_PLAYBOOK.md from GitHub
-#   4. short inline prompt
-_script_dir="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || true)"
-if claude plugin list 2>/dev/null | grep -q "domi-guide"; then
-  TUTOR_PROMPT="/guide all"
-elif [[ -n "$_script_dir" && -r "$_script_dir/TUTOR_PLAYBOOK.md" ]]; then
-  TUTOR_PROMPT="$(cat "$_script_dir/TUTOR_PLAYBOOK.md")"
-else
-  TUTOR_PROMPT="$(curl -fsSL "$DOMI_PLAYBOOK_URL" 2>/dev/null || true)"
-fi
-if [[ -z "${TUTOR_PROMPT// }" ]]; then
-  TUTOR_PROMPT="你是 DOMI 新人 onboarding 導師,請用繁體中文一步一步帶我(一次一步,等我回覆再繼續)熟悉:Claude Desktop 與 Claude Code CLI 的差別、設定 Claude Desktop(登入資訊請我聯絡 Corey)、用 gh 把 domiearth/foreman clone 到 ~/project、以及 git repo / agent / agent workspace 的關係。"
+# Open an interactive Claude session in the user's personal repo so they can
+# start the tutorial by typing /guide.
+#
+# IMPORTANT: Claude Code has NO way to run a slash command at startup —
+# `claude "/guide all"` is parsed as an unknown command. Slash commands only
+# resolve when typed INSIDE an interactive session. So we drop the user into
+# a clean interactive session and tell them to type /guide (not auto-run it).
+TUTOR_DIR="$DOMI_PROJECT_DIR"
+if [[ -n "${GH_HANDLE:-}" && -d "$DOMI_PROJECT_DIR/agent-$GH_HANDLE/.git" ]]; then
+  TUTOR_DIR="$DOMI_PROJECT_DIR/agent-$GH_HANDLE"   # start in your personal repo
 fi
 
 if [[ -z "${DOMI_NONINTERACTIVE:-}" ]] && command -v claude &>/dev/null; then
   echo ""
-  printf '  Start a guided Claude session to learn the claude CLI + gh? [Y/n] '
+  printf '  Start a guided Claude session now? [Y/n] '
   read -r START_TUTORIAL </dev/tty
   if [[ ! "$START_TUTORIAL" =~ ^[nN]$ ]]; then
-    info "Launching guided session — follow along, type /exit when done."
     echo ""
-    exec claude "$TUTOR_PROMPT" </dev/tty
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  ✅ Session 開啟後,輸入這一行開始新人教學:"
+    echo ""
+    echo "        /guide"
+    echo ""
+    echo "  (之後任何 session 都能再打 /guide 從上次進度繼續;/exit 離開)"
+    echo "  ⚠️ 若 /guide 顯示 Unknown command:domi-guide plugin 沒裝成功 →"
+    echo "     claude plugin install domi-guide@domi-claude-plugins  (或找 Corey)"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    cd "$TUTOR_DIR" && exec claude </dev/tty
   fi
-  info "Skipped guided session. Start anytime: open any claude session and type  /guide"
+  info "Skipped guided session. Start anytime: open a claude session and type  /guide"
 fi
