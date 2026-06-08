@@ -193,19 +193,20 @@ echo "        3) session 內貼上  /domi-guide:guide all  開始教學"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # ── 11. Guided first session ────────────────────────────────
+# Auto-start: natural-language prompt (first char != /) asks Claude to run the
+# tutorial command itself, so the tutor greets proactively. A startup prompt
+# starting with / would parse as a command and hang the interactive session.
 TUTOR_DIR="$DOMI_PROJECT_DIR"
 [[ -n "${GH_HANDLE:-}" && -d "$DOMI_PROJECT_DIR/agent-$GH_HANDLE/.git" ]] && TUTOR_DIR="$DOMI_PROJECT_DIR/agent-$GH_HANDLE"
+TUTOR_PROMPT="請用 /domi-guide:guide all 指令開始 DOMI 新人互動教學;全程繁體中文,先自我介紹 + 列出全部主題 + 問我準備好了沒,再等我回覆。若找不到該指令,請直接告訴我 domi-guide plugin 沒裝成功、要找 Corey。"
 if [[ -z "${DOMI_NONINTERACTIVE:-}" ]] && have claude; then
   echo ""
   printf '  Start the guided tutorial now? [Y/n] '
   read -r START_TUTORIAL </dev/tty
   if [[ ! "$START_TUTORIAL" =~ ^[nN]$ ]]; then
+    info "Launching tutorial — 導師會主動開場。/exit 離開;之後打 /guide 可續。"
     echo ""
-    echo "  ✅ Claude session 開啟後,把這一行整段複製貼上按 Enter:"
-    echo "        /domi-guide:guide all"
-    echo "  (顯示 Unknown command → domi-guide 沒裝成功,找 Corey)"
-    echo ""
-    cd "$TUTOR_DIR" && exec claude </dev/tty
+    cd "$TUTOR_DIR" && exec claude "$TUTOR_PROMPT" </dev/tty
   fi
-  info "Skipped. 之後:開 claude session 貼上  /domi-guide:guide all"
+  info "Skipped. 之後:開 claude session 打 /guide 開始教學。"
 fi
