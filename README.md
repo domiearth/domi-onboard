@@ -2,6 +2,8 @@
 
 > 新同仁一鍵設定 DOMI Claude agent 開發環境
 
+> 🚀 **上線當天請跑 [`GO_LIVE_CHECKLIST.md`](./GO_LIVE_CHECKLIST.md) 自檢**(10 分鐘,確認環境就緒)。
+
 三個 script，依作業系統 / 目標環境選擇：
 
 | Script | 平台 | 對象 |
