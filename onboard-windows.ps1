@@ -268,13 +268,13 @@ Warn "If any tools show 'restart terminal', close and reopen PowerShell, then ve
 Write-Host "    git --version && gh --version && node --version && claude --version"
 
 # -- 11. Guided first session (optional) ---------------------
-# Open an interactive Claude session in the user's personal repo so they can
-# start the tutorial by typing /guide.
+# Auto-launch the tutorial in an interactive session, started in the user's
+# personal repo.
 #
-# IMPORTANT: Claude Code has NO way to run a slash command at startup -
-# `claude "/guide all"` is parsed as an unknown command. Slash commands only
-# resolve when typed INSIDE an interactive session. So we drop the user into a
-# clean interactive session and tell them to type /guide (not auto-run it).
+# IMPORTANT: a plugin slash command passed as the startup prompt must be
+# FULLY QUALIFIED - `/domi-guide:guide all` works; the bare `/guide` alias does
+# NOT resolve at startup (only once you're typing inside a session). That's why
+# the earlier `claude "/guide all"` failed with "Unknown command".
 $tutorDir = $DOMI_PROJECT_DIR
 if ($ghHandle -and (Test-Path "$DOMI_PROJECT_DIR\agent-$ghHandle\.git")) {
     $tutorDir = "$DOMI_PROJECT_DIR\agent-$ghHandle"   # start in your personal repo
@@ -282,23 +282,16 @@ if ($ghHandle -and (Test-Path "$DOMI_PROJECT_DIR\agent-$ghHandle\.git")) {
 
 if (Get-Command claude -ErrorAction SilentlyContinue) {
     Write-Host ""
-    $startTutorial = Read-Host "  Start a guided Claude session now? [Y/n]"
+    $startTutorial = Read-Host "  Start the guided tutorial now? [Y/n]"
     if ($startTutorial -notmatch '^[nN]$') {
-        Write-Host ""
-        Write-Host "------------------------------------------------------" -ForegroundColor White
-        Write-Host "  Session opens next - type this to start the tutorial:"
-        Write-Host ""
-        Write-Host "        /guide"
-        Write-Host ""
-        Write-Host "  (any session later can run /guide to resume; /exit to leave)"
-        Write-Host "  If /guide shows 'Unknown command', the domi-guide plugin did not install:"
-        Write-Host "     claude plugin install domi-guide@domi-claude-plugins   (or ask Corey)"
-        Write-Host "------------------------------------------------------" -ForegroundColor White
+        Info "Launching tutorial - /exit to leave; resume anytime by typing /guide."
+        Write-Host "  (not auto-starting? type /guide in the session; still nothing means"
+        Write-Host "   domi-guide didn't install: claude plugin install domi-guide@domi-claude-plugins, or ask Corey)"
         Write-Host ""
         Set-Location $tutorDir
-        claude
+        claude "/domi-guide:guide all"
     } else {
-        Info "Skipped guided session. Start anytime: open a claude session and type  /guide"
+        Info "Skipped. Start anytime: open a claude session and type  /guide"
     }
 } else {
     Info "claude CLI not on PATH yet - restart PowerShell, then: cd $DOMI_PROJECT_DIR; claude"

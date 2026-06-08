@@ -265,13 +265,13 @@ echo "    4. (If skipped above) run /hub setup to configure AgentHUB later"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # ── 11. Guided first session (optional) ─────────────────────
-# Open an interactive Claude session in the user's personal repo so they can
-# start the tutorial by typing /guide.
+# Auto-launch the tutorial in an interactive session, started in the user's
+# personal repo.
 #
-# IMPORTANT: Claude Code has NO way to run a slash command at startup —
-# `claude "/guide all"` is parsed as an unknown command. Slash commands only
-# resolve when typed INSIDE an interactive session. So we drop the user into
-# a clean interactive session and tell them to type /guide (not auto-run it).
+# IMPORTANT: a plugin slash command passed as the startup prompt must be
+# FULLY QUALIFIED — `/domi-guide:guide all` works; the bare `/guide` alias
+# does NOT resolve at startup (only once you're typing inside a session).
+# That's why the earlier `claude "/guide all"` failed with "Unknown command".
 TUTOR_DIR="$DOMI_PROJECT_DIR"
 if [[ -n "${GH_HANDLE:-}" && -d "$DOMI_PROJECT_DIR/agent-$GH_HANDLE/.git" ]]; then
   TUTOR_DIR="$DOMI_PROJECT_DIR/agent-$GH_HANDLE"   # start in your personal repo
@@ -279,21 +279,14 @@ fi
 
 if [[ -z "${DOMI_NONINTERACTIVE:-}" ]] && command -v claude &>/dev/null; then
   echo ""
-  printf '  Start a guided Claude session now? [Y/n] '
+  printf '  Start the guided tutorial now? [Y/n] '
   read -r START_TUTORIAL </dev/tty
   if [[ ! "$START_TUTORIAL" =~ ^[nN]$ ]]; then
+    info "Launching tutorial — /exit to leave; resume anytime by typing /guide."
+    echo "  (沒自動開始?在 session 內打 /guide;仍不行代表 domi-guide 沒裝成功 →"
+    echo "   claude plugin install domi-guide@domi-claude-plugins,或找 Corey)"
     echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  ✅ Session 開啟後,輸入這一行開始新人教學:"
-    echo ""
-    echo "        /guide"
-    echo ""
-    echo "  (之後任何 session 都能再打 /guide 從上次進度繼續;/exit 離開)"
-    echo "  ⚠️ 若 /guide 顯示 Unknown command:domi-guide plugin 沒裝成功 →"
-    echo "     claude plugin install domi-guide@domi-claude-plugins  (或找 Corey)"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
-    cd "$TUTOR_DIR" && exec claude </dev/tty
+    cd "$TUTOR_DIR" && exec claude "/domi-guide:guide all" </dev/tty
   fi
-  info "Skipped guided session. Start anytime: open a claude session and type  /guide"
+  info "Skipped. Start anytime: open a claude session and type  /guide"
 fi
