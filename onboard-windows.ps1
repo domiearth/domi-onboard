@@ -103,34 +103,6 @@ if (Test-Command "claude") {
     Warn "Claude CLI installed but not in PATH yet. Restart terminal after script completes."
 }
 
-# -- 4b. Scoop + sshpass (required by hub-relay) -------------
-
-Info "Checking Scoop..."
-if (-not (Test-Command "scoop")) {
-    Info "Installing Scoop (user-level, no admin needed)..."
-    # Try to set CurrentUser policy for future sessions; harmless if a more
-    # specific scope (e.g. Process Bypass) already provides sufficient permissions
-    try {
-        Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force -ErrorAction Stop
-    } catch {
-        # Already covered by Process scope; install will still work
-    }
-    Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
-    Refresh-Path
-}
-
-Info "Checking sshpass..."
-if (-not (Test-Command "sshpass")) {
-    Info "Installing sshpass via Scoop..."
-    scoop install sshpass
-    Refresh-Path
-}
-if (Test-Command "sshpass") {
-    Ok "sshpass installed"
-} else {
-    Warn "sshpass install may need a terminal restart"
-}
-
 # -- 5. Claude Desktop ---------------------------------------
 
 Info "Checking Claude Desktop..."
@@ -244,67 +216,20 @@ foreach ($plugin in @("individual-agent", "hub-relay", "domi-guide")) {
 }
 Ok "domi-claude-plugins done"
 
-# -- 9b. AgentHUB connection setup ---------------------------
-
+# -- 9b. AgentHUB connection setup (delegates to hub-relay's hub-setup.ps1) --
+# Single source of truth: hub-setup.ps1 handles host/user/password + your GitHub
+# account, dual-host (LAN/Tailscale) failover, and SSH_ASKPASS auth - no sshpass
+# dependency here.
 Write-Host ""
-Info "AgentHUB connection setup - host/user/password"
-Write-Host "  Enter the hub host/user from your DOMI onboarding contact (Corey)."
-Write-Host "  Don't have it yet? Just press Enter on all three to SKIP - you can"
-Write-Host "  run hub-setup.ps1 later. (The host is an IP/hostname, NOT a command.)"
-Write-Host ""
-
-$hubHost = (Read-Host "  Hub host").Trim()
-$hubUser = (Read-Host "  Hub user").Trim()
-
-$hubPassSecure = Read-Host "  Hub password" -AsSecureString
-$bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($hubPassSecure)
-$hubPass = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
-[Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
-
-$configFile = "$env:USERPROFILE\.domi-hub.json"
-
-if ((-not $hubHost) -or (-not $hubUser) -or (-not $hubPass)) {
-    Warn "Host/user/password incomplete - skipping AgentHUB config. Run hub-setup.ps1 later."
-} elseif ($hubHost -notmatch '^[A-Za-z0-9._:-]+$') {
-    # Guards against pasting a URL/command into the host field (e.g. a curl line).
-    Warn "Hub host '$hubHost' doesn't look like a hostname/IP - skipping AgentHUB config."
-    Warn "If you don't have a hub host yet, just press Enter at these prompts. Run hub-setup.ps1 later."
+Info "AgentHUB connection setup"
+$hubSetup = Get-ChildItem "$env:USERPROFILE\.claude\plugins\cache\domi-claude-plugins\hub-relay\*\scripts\hub-setup.ps1" -ErrorAction SilentlyContinue | Sort-Object FullName | Select-Object -Last 1
+if ($hubSetup) {
+    Info "Launching hub-setup (host / user / password / your GitHub account)..."
+    Write-Host "  Don't have the hub host/creds yet? Press Enter through to skip - run it later."
+    try { & $hubSetup.FullName } catch { Warn "hub-setup skipped/failed - run later: $($hubSetup.FullName)" }
 } else {
-    Info "Testing connection to ${hubUser}@${hubHost}..."
-    # Never let a failed/garbage connection test abort the script: sshpass.exe
-    # writes to stderr (e.g. "getsockname failed: Not a socket"), which under
-    # $ErrorActionPreference=Stop would terminate the run before the summary +
-    # guided session. Force Continue + swallow all output + try/catch.
-    $sshOk = $false
-    $prevEAP = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    try {
-        & sshpass -p "$hubPass" ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR "${hubUser}@${hubHost}" "echo ok" 2>&1 | Out-Null
-        $sshOk = ($LASTEXITCODE -eq 0)
-    } catch {
-        $sshOk = $false
-    } finally {
-        $ErrorActionPreference = $prevEAP
-    }
-    if ($sshOk) {
-        $cfg = [ordered]@{
-            host = $hubHost
-            user = $hubUser
-            password = $hubPass
-        } | ConvertTo-Json
-        Set-Content -Path $configFile -Value $cfg -Encoding UTF8
-        try {
-            $acl = Get-Acl $configFile
-            $acl.SetAccessRuleProtection($true, $false)
-            $rule = New-Object System.Security.AccessControl.FileSystemAccessRule($env:USERNAME, "FullControl", "Allow")
-            $acl.AddAccessRule($rule)
-            Set-Acl -Path $configFile -AclObject $acl
-        } catch {}
-        Ok "AgentHUB credentials saved to $configFile"
-    } else {
-        Warn "Connection test failed - credentials NOT saved. Run hub-setup.ps1 after fixing network."
-        Warn "(sshpass can be flaky on Windows; configuring the hub later via hub-setup.ps1 is fine.)"
-    }
+    Warn "hub-relay hub-setup.ps1 not found (plugin install may have failed)."
+    Warn "  Configure later from any Claude session with: /hub setup"
 }
 
 # -- 10. Summary ---------------------------------------------
@@ -319,21 +244,23 @@ try { Write-Host "    gh           $(gh --version | Select-Object -First 1)" } c
 try { Write-Host "    node         $(node --version)" } catch { Write-Host "    node         (restart terminal)" }
 try { Write-Host "    claude CLI   installed" } catch { Write-Host "    claude CLI   (restart terminal)" }
 Write-Host ""
-Write-Host "  Plugins (via domi-claude-plugins marketplace):"
-Write-Host "    stack-guard    [OK]  TECH_STACK.md enforcement"
-Write-Host "    entity-guard   [OK]  Local vs Global/MT-DAO boundary"
-Write-Host "    domi-init      [OK]  repo bootstrap with CLAUDE.md templates"
-Write-Host "    schema-change  [OK]  datahouse cross-repo coordination"
-Write-Host "    hub-relay      [OK]  SSH bridge to AgentHUB"
+Write-Host "  Plugins (personal machine, via domi-claude-plugins marketplace):"
+Write-Host "    individual-agent [OK]  your personal repo behaviour + /note"
+Write-Host "    hub-relay        [OK]  /hub - work on hub-side project agents"
+Write-Host "    domi-guide       [OK]  /guide interactive tutorial"
 if ($installWB -match '^[yY]$') {
     Write-Host "    claude-workbench     [OK] (mentor, kanban, chat)"
 }
 Write-Host ""
 Write-Host "  Next steps:"
-Write-Host "    1. Open Claude Desktop and sign in"
-Write-Host "    2. Run: cd $DOMI_PROJECT_DIR; gh repo clone domiearth/foreman"
-Write-Host "    3. Run: cd foreman; claude   # start your first session"
-Write-Host "    4. (If skipped above) run hub-setup.ps1 to configure AgentHUB later"
+Write-Host "    1. Open Claude Desktop and sign in (account from Corey)"
+if ($ghHandle -and (Test-Path "$DOMI_PROJECT_DIR\agent-$ghHandle\.git")) {
+    Write-Host "    2. Your personal workspace: cd $DOMI_PROJECT_DIR\agent-$ghHandle; claude"
+} else {
+    Write-Host "    2. Clone your personal repo: gh repo clone domiearth/agent-<your-handle>"
+}
+Write-Host "    3. New here? The guided tour starts next - or type /guide anytime."
+Write-Host "    4. (If skipped above) run /hub setup to configure AgentHUB later"
 Write-Host "------------------------------------------------------" -ForegroundColor White
 
 Write-Host ""
