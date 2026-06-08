@@ -13,10 +13,13 @@
 
 > 💡 跑的過程會洗出很多字,正常的,代表它在工作。整個過程約 10～30 分鐘(看網路)。
 
-> ⚠️ **先確認 macOS 版本:建議 macOS 13 (Ventura) 以上。**
-> 點左上角  → 「關於這台 Mac」看版本。**低於 13(如 macOS 12 Monterey)會卡很久** ——
-> Homebrew 不再支援舊系統,工具得從原始碼慢慢編譯(可能拖一小時,看起來像當機其實沒當)。
-> 請先到「系統設定 → 軟體更新」升級再跑;機型升不上去請找 onboarding 窗口或 Corey。
+> ⚠️ **先確認 macOS 版本:點左上角  → 「關於這台 Mac」看版本。**
+> - **macOS 13 (Ventura) 以上** → 用上面那行(`onboard-macos.sh`,走 Homebrew)。
+> - **macOS 12 (Monterey)、且升不上去** → 改用**專用 script**(不用 Homebrew,避開漫長編譯):
+>   ```bash
+>   curl -fsSL https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-macos-12.sh -o ~/onboard-macos-12.sh && bash ~/onboard-macos-12.sh
+>   ```
+> - 能升級就先到「系統設定 → 軟體更新」升到 13+ 再跑(最省事);機型升不上去找 Corey。
 
 **第 1 步:打開「終端機」(Terminal)**
 
@@ -36,6 +39,32 @@ curl -fsSL https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard
 - 看到 `[y/N]` 之類問題,不確定就直接按 `Enter`。
 
 > ⚠️ **千萬不要在前面自己加 `sudo`**。直接貼上面那行就好。
+
+---
+
+## 開始前:複製貼上、帳號、三個登入
+
+### 怎麼在「終端機」複製貼上
+
+1. 在這份說明或網頁上,把指令**整段反白 → `⌘ Command` + `C`** 複製。
+2. 點一下終端機視窗 → **`⌘ Command` + `V`** 貼上 → 按 `Enter` 執行。
+3. 要你**輸入密碼**時(開機密碼 / sudo):**打字不會顯示任何字是正常的**,打完按 Enter 即可。
+
+### 你的 GitHub「帳號名稱」(account name)在哪看
+
+clone 你自己的 agent repo 會用到。三種方式看:
+- 到 <https://github.com> 右上角**圓形頭像 → 第一行就是你的帳號名**(例 `kirinchen`)。
+- 或頭像 → **Settings**,最上方 username。
+- 已登入 `gh` 後,終端機打:`gh api user --jq .login`(會印出你的帳號名)。
+> ⚠️ 是**帳號名(username)**,不是你的姓名或 email。沒加入 `domiearth` org → 找 Corey。
+
+### 過程中會遇到「三個登入」,怎麼登
+
+| # | 登入哪裡 | 怎麼登 |
+|---|---|---|
+| 1 | **GitHub CLI(`gh`)** | script 跑到會問,選 **GitHub.com → HTTPS → Login with a web browser**,瀏覽器跟著授權即可 |
+| 2 | **Claude Code CLI** | 第一次開 `claude` 會要登入,跟著畫面用 Anthropic 帳號登入(**帳號 / 授權找 Corey**,不要自己亂註冊) |
+| 3 | **Claude Desktop** | 開 app 後登入,**帳號找 Corey** |
 
 ---
 

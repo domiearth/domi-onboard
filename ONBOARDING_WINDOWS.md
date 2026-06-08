@@ -33,6 +33,32 @@ $f="$env:TEMP\onboard-windows.ps1"; irm https://raw.githubusercontent.com/domiea
 
 ---
 
+## 開始前:複製貼上、帳號、三個登入
+
+### 怎麼在 PowerShell 複製貼上
+
+1. 在這份說明或網頁上,把指令**整段反白 → `Ctrl` + `C`** 複製。
+2. 點一下 PowerShell 視窗 → **按滑鼠右鍵**(就會自動貼上)或 `Ctrl` + `V` → 按 `Enter` 執行。
+3. 要你**輸入密碼**時:**打字不會顯示任何字是正常的**,打完按 Enter。
+
+### 你的 GitHub「帳號名稱」(account name)在哪看
+
+clone 你自己的 agent repo 會用到。三種方式看:
+- 到 <https://github.com> 右上角**圓形頭像 → 第一行就是你的帳號名**(例 `kirinchen`)。
+- 或頭像 → **Settings**,最上方 username。
+- 已登入 `gh` 後,PowerShell 打:`gh api user --jq .login`(會印出你的帳號名)。
+> ⚠️ 是**帳號名(username)**,不是你的姓名或 email。沒加入 `domiearth` org → 找 Corey。
+
+### 過程中會遇到「三個登入」,怎麼登
+
+| # | 登入哪裡 | 怎麼登 |
+|---|---|---|
+| 1 | **GitHub CLI(`gh`)** | script 跑到會問,選 **GitHub.com → HTTPS → Login with a web browser**,瀏覽器跟著授權即可 |
+| 2 | **Claude Code CLI** | 第一次開 `claude` 會要登入,跟著畫面用 Anthropic 帳號登入(**帳號 / 授權找 Corey**,不要自己亂註冊) |
+| 3 | **Claude Desktop** | 開 app 後登入,**帳號找 Corey** |
+
+---
+
 ## 前置需求
 
 - Windows 10 (1709+) 或 Windows 11
