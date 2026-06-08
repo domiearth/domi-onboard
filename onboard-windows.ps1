@@ -171,6 +171,27 @@ if ($LASTEXITCODE -eq 0) {
 Info "Setting up project directory: $DOMI_PROJECT_DIR"
 New-Item -ItemType Directory -Force -Path $DOMI_PROJECT_DIR | Out-Null
 
+# -- 7b. Personal agent repo (your "drawer") -----------------
+# gh is installed + authenticated by now, so clone the person's own
+# agent-<handle> repo first - their home base (notes / reports / drafts;
+# individual-agent plugin governs it). Cross-repo work goes via /hub run.
+Info "Cloning your personal agent repo..."
+$ghHandle = (gh api user --jq ".login" 2>$null)
+if (-not $ghHandle) {
+    Warn "Could not read your GitHub handle - skipping. Clone later: gh repo clone domiearth/agent-<your-handle>"
+} elseif (Test-Path "$DOMI_PROJECT_DIR\agent-$ghHandle\.git") {
+    Ok "agent-$ghHandle already cloned"
+} else {
+    gh repo view "domiearth/agent-$ghHandle" 2>$null | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        gh repo clone "domiearth/agent-$ghHandle" "$DOMI_PROJECT_DIR\agent-$ghHandle"
+        if ($LASTEXITCODE -eq 0) { Ok "cloned agent-$ghHandle - your personal workspace" }
+        else { Warn "clone failed - retry later: gh repo clone domiearth/agent-$ghHandle" }
+    } else {
+        Warn "Personal agent repo domiearth/agent-$ghHandle not found yet. Ask Corey (domi-init); you can still work via /hub run."
+    }
+}
+
 # -- 8. claude-workbench (optional) --------------------------
 
 Write-Host ""
