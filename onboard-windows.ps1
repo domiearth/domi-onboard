@@ -175,15 +175,19 @@ if ($installWB -match '^[yY]$') {
     $wbMarketList = claude plugin marketplace list 2>&1
     if ($wbMarketList -match "claude-workbench") {
         Ok "claude-workbench marketplace already registered"
+        # Re-run = update: refresh marketplace so newer plugin versions are visible.
+        try { claude plugin marketplace update claude-workbench 2>$null } catch {}
     } else {
         claude plugin marketplace add https://github.com/kirinchen/claude-workbench
         Ok "claude-workbench marketplace registered"
     }
 
-    Info "Installing workbench plugins (mentor, kanban, chat)..."
+    Info "Installing / updating workbench plugins (mentor, kanban, chat)..."
     foreach ($plugin in @("mentor", "kanban", "chat")) {
-        Info "  Installing $plugin..."
-        try { claude plugin install "${plugin}@claude-workbench" 2>$null } catch { Warn "  $plugin skipped (may already be installed)" }
+        Info "  Installing / updating $plugin..."
+        # install = no-op if present; update = bump an already-installed plugin to latest.
+        try { claude plugin install "${plugin}@claude-workbench" 2>$null } catch {}
+        try { claude plugin update  "${plugin}@claude-workbench" 2>$null } catch {}
     }
     Ok "claude-workbench done"
 } else {
@@ -199,6 +203,8 @@ Info "Registering DOMI marketplace (private - requires domiearth org access)..."
 $marketplaceList = claude plugin marketplace list 2>&1
 if ($marketplaceList -match "domi-claude-plugins") {
     Ok "DOMI marketplace already registered"
+    # Re-run = update: refresh marketplace so newer plugin versions are visible.
+    try { claude plugin marketplace update domi-claude-plugins 2>$null } catch {}
 } else {
     claude plugin marketplace add https://github.com/domiearth/domi-claude-plugins
     Ok "DOMI marketplace registered"
@@ -209,10 +215,12 @@ if ($marketplaceList -match "domi-claude-plugins") {
 # run on the AgentHUB, not here - cross-repo work goes through hub-relay and the
 # hub enforces them server-side. See domi-claude-plugins README (install matrix)
 # + GO_LIVE_CHECKLIST.md section 1.
-Info "Installing DOMI plugins from marketplace..."
+Info "Installing / updating DOMI plugins from marketplace..."
 foreach ($plugin in @("individual-agent", "hub-relay", "domi-guide")) {
-    Info "  Installing $plugin..."
-    try { claude plugin install "${plugin}@domi-claude-plugins" 2>$null } catch { Warn "  $plugin skipped (may already be installed)" }
+    Info "  Installing / updating $plugin..."
+    # install = no-op if present; update = bump an already-installed plugin to latest.
+    try { claude plugin install "${plugin}@domi-claude-plugins" 2>$null } catch {}
+    try { claude plugin update  "${plugin}@domi-claude-plugins" 2>$null } catch {}
 }
 Ok "domi-claude-plugins done"
 

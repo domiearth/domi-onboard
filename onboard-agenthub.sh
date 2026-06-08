@@ -194,15 +194,18 @@ if command -v claude &>/dev/null; then
   fi
   if claude plugin marketplace list 2>/dev/null | grep -q "domi-claude-plugins"; then
     ok "DOMI marketplace already registered"
+    # Re-run = update: refresh marketplace so newer plugin versions are visible.
+    claude plugin marketplace update domi-claude-plugins 2>/dev/null || true
   else
     claude plugin marketplace add https://github.com/domiearth/domi-claude-plugins \
       && ok "DOMI marketplace registered" \
       || warn "marketplace add failed (need domiearth org access) — install plugins manually later"
   fi
   for plugin in stack-guard entity-guard schema-change project-protect domi-init domi-guide; do
-    info "  Installing $plugin..."
-    claude plugin install "${plugin}@domi-claude-plugins" 2>/dev/null \
-      || warn "  $plugin install skipped (may already be installed)"
+    info "  Installing / updating $plugin..."
+    # install = no-op if present; update = bump an already-installed plugin to latest.
+    claude plugin install "${plugin}@domi-claude-plugins" 2>/dev/null || true
+    claude plugin update  "${plugin}@domi-claude-plugins" 2>/dev/null || true
   done
   ok "hub-side governance plugins done"
 else
