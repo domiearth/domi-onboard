@@ -268,13 +268,9 @@ Warn "If any tools show 'restart terminal', close and reopen PowerShell, then ve
 Write-Host "    git --version && gh --version && node --version && claude --version"
 
 # -- 11. Guided first session (optional) ---------------------
-# Auto-launch the tutorial in an interactive session, started in the user's
-# personal repo.
-#
-# IMPORTANT: a plugin slash command passed as the startup prompt must be
-# FULLY QUALIFIED - `/domi-guide:guide all` works; the bare `/guide` alias does
-# NOT resolve at startup (only once you're typing inside a session). That's why
-# the earlier `claude "/guide all"` failed with "Unknown command".
+# Open a CLEAN interactive session in the user's personal repo, then tell them
+# to paste the tutorial command themselves (same rock-solid approach as macOS,
+# where auto-running it can hang). Use the FULL name /domi-guide:guide all.
 $tutorDir = $DOMI_PROJECT_DIR
 if ($ghHandle -and (Test-Path "$DOMI_PROJECT_DIR\agent-$ghHandle\.git")) {
     $tutorDir = "$DOMI_PROJECT_DIR\agent-$ghHandle"   # start in your personal repo
@@ -284,14 +280,21 @@ if (Get-Command claude -ErrorAction SilentlyContinue) {
     Write-Host ""
     $startTutorial = Read-Host "  Start the guided tutorial now? [Y/n]"
     if ($startTutorial -notmatch '^[nN]$') {
-        Info "Launching tutorial - /exit to leave; resume anytime by typing /guide."
-        Write-Host "  (not auto-starting? type /guide in the session; still nothing means"
-        Write-Host "   domi-guide didn't install: claude plugin install domi-guide@domi-claude-plugins, or ask Corey)"
+        Write-Host ""
+        Write-Host "------------------------------------------------------" -ForegroundColor White
+        Write-Host "  Session opens next. Copy-paste this whole line, press Enter:"
+        Write-Host ""
+        Write-Host "        /domi-guide:guide all"
+        Write-Host ""
+        Write-Host "  The tutorial starts. /exit to leave; later any session: /guide to resume."
+        Write-Host "  If it shows 'Unknown command', domi-guide didn't install - ask Corey, or:"
+        Write-Host "     claude plugin install domi-guide@domi-claude-plugins"
+        Write-Host "------------------------------------------------------" -ForegroundColor White
         Write-Host ""
         Set-Location $tutorDir
-        claude "/domi-guide:guide all"
+        claude
     } else {
-        Info "Skipped. Start anytime: open a claude session and type  /guide"
+        Info "Skipped. Start anytime: open a claude session and paste  /domi-guide:guide all"
     }
 } else {
     Info "claude CLI not on PATH yet - restart PowerShell, then: cd $DOMI_PROJECT_DIR; claude"

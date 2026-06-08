@@ -18,7 +18,8 @@
 
 | Script | 平台 | 對象 |
 |---|---|---|
-| [`onboard-macos.sh`](./onboard-macos.sh) | macOS(Intel / Apple Silicon) | 個人 dev 機 |
+| [`onboard-macos.sh`](./onboard-macos.sh) | macOS **13+**(Intel / Apple Silicon) | 個人 dev 機 |
+| [`onboard-macos-12.sh`](./onboard-macos-12.sh) | macOS **12 (Monterey)** — 不用 Homebrew,避開慢編譯 | 個人 dev 機(舊系統) |
 | [`onboard-windows.ps1`](./onboard-windows.ps1) | Windows 10/11(PowerShell 5.1+) | 個人 dev 機 |
 | [`onboard-agenthub.sh`](./onboard-agenthub.sh) | Ubuntu 22.04+ / 24.04 LTS | AgentHUB server |
 
