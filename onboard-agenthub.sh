@@ -138,6 +138,35 @@ else
   fi
 fi
 
+# ─── Part B2: Governance plugins (hub-side enforcement) ──────
+# The hub is where every project repo lives, so the governance GUARDS run here
+# — authoritatively, server-side. The hub does NOT install hub-relay (it never
+# connects to itself) or individual-agent (no personal repos live on the hub).
+# Personal machines install the mirror set (individual-agent + hub-relay +
+# domi-guide). See domi-claude-plugins README install matrix.
+info ""
+info "── Part B2 — Governance plugins (hub-side) ──"
+if command -v claude &>/dev/null; then
+  if claude plugin marketplace list 2>/dev/null | grep -q "domi-claude-plugins"; then
+    ok "DOMI marketplace already registered"
+  else
+    claude plugin marketplace add https://github.com/domiearth/domi-claude-plugins \
+      && ok "DOMI marketplace registered" \
+      || warn "marketplace add failed (need domiearth org access) — install plugins manually later"
+  fi
+  for plugin in stack-guard entity-guard schema-change project-protect domi-init domi-guide; do
+    info "  Installing $plugin..."
+    claude plugin install "${plugin}@domi-claude-plugins" 2>/dev/null \
+      || warn "  $plugin install skipped (may already be installed)"
+  done
+  ok "hub-side governance plugins done"
+else
+  warn "claude CLI not found on this hub — skipping governance plugins."
+  warn "  Install Claude Code first, then re-run, or install manually:"
+  warn "  claude plugin marketplace add https://github.com/domiearth/domi-claude-plugins"
+  warn "  claude plugin install stack-guard@domi-claude-plugins  # +entity-guard schema-change project-protect domi-init domi-guide"
+fi
+
 # ─── Part C: Verification ────────────────────────────────────
 
 info ""

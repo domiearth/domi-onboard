@@ -200,7 +200,7 @@ if ($installWB -match '^[yY]$') {
 # -- 9. domi-claude-plugins (required, via marketplace) -----
 
 Write-Host ""
-Info "domi-claude-plugins - DOMI governance plugins (REQUIRED)"
+Info "domi-claude-plugins - personal-machine plugins (REQUIRED)"
 Info "Registering DOMI marketplace (private - requires domiearth org access)..."
 
 $marketplaceList = claude plugin marketplace list 2>&1
@@ -211,8 +211,13 @@ if ($marketplaceList -match "domi-claude-plugins") {
     Ok "DOMI marketplace registered"
 }
 
+# Personal machines install ONLY these three. The governance guards
+# (stack-guard / entity-guard / schema-change / project-protect / domi-init)
+# run on the AgentHUB, not here - cross-repo work goes through hub-relay and the
+# hub enforces them server-side. See domi-claude-plugins README (install matrix)
+# + GO_LIVE_CHECKLIST.md section 1.
 Info "Installing DOMI plugins from marketplace..."
-foreach ($plugin in @("stack-guard", "entity-guard", "domi-init", "schema-change", "hub-relay", "project-protect", "domi-guide")) {
+foreach ($plugin in @("individual-agent", "hub-relay", "domi-guide")) {
     Info "  Installing $plugin..."
     try { claude plugin install "${plugin}@domi-claude-plugins" 2>$null } catch { Warn "  $plugin skipped (may already be installed)" }
 }

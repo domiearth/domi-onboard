@@ -183,7 +183,7 @@ fi
 # ── 9. domi-claude-plugins (required, via marketplace) ─────
 
 echo ""
-info "domi-claude-plugins — DOMI governance plugins (REQUIRED)"
+info "domi-claude-plugins — personal-machine plugins (REQUIRED)"
 info "Registering DOMI marketplace (private — requires domiearth org access)..."
 
 if claude plugin marketplace list 2>/dev/null | grep -q "domi-claude-plugins"; then
@@ -193,8 +193,13 @@ else
   ok "DOMI marketplace registered"
 fi
 
+# Personal machines install ONLY these three. The governance guards
+# (stack-guard / entity-guard / schema-change / project-protect / domi-init)
+# run on the AgentHUB, not here — cross-repo work goes through hub-relay and the
+# hub enforces them server-side. See domi-claude-plugins README (install matrix)
+# + GO_LIVE_CHECKLIST.md §1.
 info "Installing DOMI plugins from marketplace..."
-for plugin in stack-guard entity-guard domi-init schema-change hub-relay project-protect domi-guide; do
+for plugin in individual-agent hub-relay domi-guide; do
   info "  Installing $plugin..."
   claude plugin install "${plugin}@domi-claude-plugins" 2>/dev/null \
     || warn "  $plugin install skipped (may already be installed)"

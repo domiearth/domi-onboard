@@ -10,7 +10,17 @@
 | [`onboard-windows.ps1`](./onboard-windows.ps1) | Windows 10/11（PowerShell 5.1+） | 個人 dev 機 |
 | [`onboard-agenthub.sh`](./onboard-agenthub.sh) | Ubuntu 22.04+ / 24.04 LTS | **AgentHUB server**（同仁透過 SSH 進來開發） |
 
-跑完會裝好：git、gh CLI、Node.js 22、Claude Code CLI、Claude Desktop、sshpass、DOMI marketplace + 7 個 plugin（含 hub-relay、project-protect、domi-guide），並設定好 AgentHUB 連線。
+跑完會裝好：git、gh CLI、Node.js 22、Claude Code CLI、Claude Desktop、sshpass、DOMI marketplace + plugin，並設定好 AgentHUB 連線。
+
+### Plugin 安裝矩陣(2026-06-08 起 — 不再全裝)
+
+| 機器 | 裝哪些 plugin | 為什麼 |
+|---|---|---|
+| **個人電腦**(macos / windows) | `individual-agent` · `hub-relay` · `domi-guide` | 個人 repo 行為 + 跨 hub 通道 + 教學 |
+| **AgentHUB**(agenthub) | `stack-guard` · `entity-guard` · `schema-change` · `project-protect` · `domi-init` · `domi-guide` | 治理 guard 在 hub **權威執行**(所有 project repo live 在 hub) |
+
+> 個人電腦**不裝**治理 guard:你的跨 repo 操作經 `hub-relay` 送到 hub,**hub 端的 guard 才是權威把關**。
+> 個人機保持極簡 = 更少出錯面。完整說明見 `domi-claude-plugins` README 的安裝矩陣。
 
 > **新人導覽 = `domi-guide` plugin 的 `/guide` 指令**（2026-06-05 起）。onboarding script 最後一步會自動開
 > `claude "/guide all"` 跑完整教學（主題 0–7）；之後**忘了任何一章，在任何 Claude Code session 打
