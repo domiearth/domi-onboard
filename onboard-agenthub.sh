@@ -111,10 +111,41 @@ else
   warn "Note: ~/.cargo/env is sourced via ~/.profile and ~/.bashrc on next shell"
 fi
 
+# A5. Claude Code CLI (npm global → ~/.local, user-level)
+info "Checking Claude Code CLI..."
+if have claude; then
+  ok "claude CLI already installed"
+elif have npm; then
+  info "Installing Claude Code CLI via npm..."
+  npm install -g @anthropic-ai/claude-code \
+    && ok "claude CLI installed" \
+    || warn "claude install failed — install manually: npm install -g @anthropic-ai/claude-code"
+else
+  warn "npm not on PATH yet — open a new shell (source ~/.profile) then re-run to install claude"
+fi
+
 # ─── Part B: System-level installs (sudo prompt) ─────────────
 
 info ""
 info "── Part B — System-level packages (sudo required) ──"
+
+# B0. GitHub CLI (official apt repo) — needed for gh auth + the private
+# domi-claude-plugins marketplace. Not in Ubuntu's default repos, so add
+# GitHub's keyring + source first. Idempotent: skipped once gh is present.
+if have gh; then
+  ok "gh $(gh --version | head -1 | awk '{print $3}') already installed"
+else
+  info "Installing GitHub CLI (official apt repo)..."
+  if sudo mkdir -p -m 755 /etc/apt/keyrings \
+    && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg >/dev/null \
+    && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null \
+    && sudo apt update -y && sudo apt install -y gh; then
+    ok "gh installed"
+  else
+    warn "gh install failed — see https://github.com/cli/cli/blob/trunk/docs/install_linux.md"
+  fi
+fi
 
 NEED_APT=()
 for pkg in build-essential shellcheck sshpass postgresql-client tmux; do
@@ -147,6 +178,20 @@ fi
 info ""
 info "── Part B2 — Governance plugins (hub-side) ──"
 if command -v claude &>/dev/null; then
+  # The private DOMI marketplace needs gh auth with domiearth org access —
+  # without it `marketplace add` 404s. Authenticate here before installing.
+  if command -v gh &>/dev/null && gh auth status &>/dev/null; then
+    ok "GitHub authenticated"
+  elif command -v gh &>/dev/null; then
+    info "GitHub auth required for the private DOMI marketplace..."
+    if [[ -t 0 ]]; then
+      gh auth login || warn "gh auth login skipped — marketplace add will 404 until authenticated"
+    else
+      warn "Non-interactive shell — run 'gh auth login' (or export GH_TOKEN) in an SSH shell, then re-run."
+    fi
+  else
+    warn "gh not installed — cannot reach the private marketplace. Install gh + 'gh auth login' first."
+  fi
   if claude plugin marketplace list 2>/dev/null | grep -q "domi-claude-plugins"; then
     ok "DOMI marketplace already registered"
   else
