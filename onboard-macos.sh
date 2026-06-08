@@ -105,15 +105,6 @@ if need_cmd claude; then
 fi
 ok "claude CLI installed"
 
-# ── 4b. sshpass (required by hub-relay) ─────────────────────
-
-info "Checking sshpass..."
-if need_cmd sshpass; then
-  info "Installing sshpass via Homebrew..."
-  brew install hudochenkov/sshpass/sshpass
-fi
-ok "sshpass installed"
-
 # ── 5. Claude Code Desktop ──────────────────────────────────
 
 info "Checking Claude Desktop..."
@@ -226,48 +217,22 @@ for plugin in individual-agent hub-relay domi-guide; do
 done
 ok "domi-claude-plugins done"
 
-# ── 9b. AgentHUB connection setup ───────────────────────────
-
+# ── 9b. AgentHUB connection setup (delegates to hub-relay's hub-setup.sh) ──
+# Single source of truth: hub-setup.sh handles host/user/password + your GitHub
+# account, dual-host (LAN/Tailscale) failover, and SSH_ASKPASS auth — so no
+# sshpass dependency here. (host/user/creds from Corey.)
 echo ""
-info "AgentHUB connection setup — host/user/password"
-echo "  Enter the hub host/user from your DOMI onboarding contact (Corey)."
-echo "  Don't have it yet? Just press Enter on all three to SKIP — you can"
-echo "  run hub-setup.sh later. (The host is an IP/hostname, NOT a command.)"
-echo ""
-
+info "AgentHUB connection setup"
+HUB_SETUP=$(ls "$HOME"/.claude/plugins/cache/domi-claude-plugins/hub-relay/*/scripts/hub-setup.sh 2>/dev/null | sort -V | tail -1)
 if [[ -n "${DOMI_NONINTERACTIVE:-}" ]]; then
-  HUB_HOST="" HUB_USER="" HUB_PASS_INPUT=""
+  info "Non-interactive — skipping. Configure later: /hub setup (or run hub-setup.sh)."
+elif [[ -n "$HUB_SETUP" ]]; then
+  info "Launching hub-setup (host / user / password / your GitHub account)..."
+  echo "  Don't have the hub host/creds yet? Press Enter through to skip — run it later."
+  bash "$HUB_SETUP" </dev/tty || warn "hub-setup skipped/failed — run later: bash $HUB_SETUP"
 else
-  read -r -p "  Hub host: " HUB_HOST </dev/tty
-  read -r -p "  Hub user: " HUB_USER </dev/tty
-  read -r -s -p "  Hub password: " HUB_PASS_INPUT </dev/tty
-  echo ""
-fi
-
-if [[ -z "$HUB_HOST" || -z "$HUB_USER" || -z "$HUB_PASS_INPUT" ]]; then
-  warn "Host/user/password incomplete — skipping AgentHUB config. Run hub-setup.sh later to configure."
-elif [[ ! "$HUB_HOST" =~ ^[A-Za-z0-9._:-]+$ ]]; then
-  # Guards against pasting a URL/command into the host field (e.g. a curl line).
-  warn "Hub host '$HUB_HOST' doesn't look like a hostname/IP — skipping AgentHUB config. Run hub-setup.sh later."
-else
-  info "Testing connection to ${HUB_USER}@${HUB_HOST}..."
-  if sshpass -p "$HUB_PASS_INPUT" ssh -o ConnectTimeout=5 \
-     -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR \
-     "${HUB_USER}@${HUB_HOST}" "echo ok" &>/dev/null; then
-    ESC_PASS=$(printf '%s' "$HUB_PASS_INPUT" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' 2>/dev/null \
-      || printf '"%s"' "$HUB_PASS_INPUT")
-    cat > "$HOME/.domi-hub.json" <<EOF
-{
-  "host": "$HUB_HOST",
-  "user": "$HUB_USER",
-  "password": $ESC_PASS
-}
-EOF
-    chmod 600 "$HOME/.domi-hub.json"
-    ok "AgentHUB credentials saved to ~/.domi-hub.json"
-  else
-    warn "Connection test failed — credentials NOT saved. Run hub-setup.sh after fixing network."
-  fi
+  warn "hub-relay hub-setup.sh not found (plugin install may have failed)."
+  warn "  Configure later from any Claude session with: /hub setup"
 fi
 
 # ── 10. Summary ─────────────────────────────────────────────
@@ -283,19 +248,21 @@ echo "    node         $(node --version)"
 echo "    claude CLI   $(claude --version 2>/dev/null || echo 'installed')"
 echo "    Claude Desktop  $(test -d /Applications/Claude.app && echo '✅' || echo '❌ manual install needed')"
 echo ""
-echo "  Plugins (via domi-claude-plugins marketplace):"
-echo "    stack-guard    ✅  TECH_STACK.md enforcement"
-echo "    entity-guard   ✅  Local vs Global/MT-DAO boundary"
-echo "    domi-init      ✅  repo bootstrap with CLAUDE.md templates"
-echo "    schema-change  ✅  datahouse cross-repo coordination"
-echo "    hub-relay      ✅  SSH bridge to AgentHUB"
+echo "  Plugins (personal machine, via domi-claude-plugins marketplace):"
+echo "    individual-agent ✅  your personal repo behaviour + /note"
+echo "    hub-relay        ✅  /hub — work on hub-side project agents"
+echo "    domi-guide       ✅  /guide interactive tutorial"
 [[ "${INSTALL_WORKBENCH:-}" =~ ^[yY]$ ]] && echo "    claude-workbench     ✅ (mentor, kanban, chat)"
 echo ""
 echo "  Next steps:"
-echo "    1. Open Claude Desktop and sign in"
-echo "    2. Run: cd $DOMI_PROJECT_DIR && gh repo clone domiearth/foreman"
-echo "    3. Run: cd foreman && claude   # start your first session"
-echo "    4. (If skipped above) run hub-setup.sh to configure AgentHUB later"
+echo "    1. Open Claude Desktop and sign in (account from Corey)"
+if [[ -n "${GH_HANDLE:-}" && -d "$DOMI_PROJECT_DIR/agent-$GH_HANDLE/.git" ]]; then
+  echo "    2. Your personal workspace: cd $DOMI_PROJECT_DIR/agent-$GH_HANDLE && claude"
+else
+  echo "    2. Clone your personal repo: gh repo clone domiearth/agent-<your-handle>"
+fi
+echo "    3. New here? The guided tour starts next — or type /guide anytime."
+echo "    4. (If skipped above) run /hub setup to configure AgentHUB later"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # ── 11. Guided first session (optional) ─────────────────────

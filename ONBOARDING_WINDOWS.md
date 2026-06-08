@@ -77,7 +77,6 @@ Set-ExecutionPolicy Bypass -Scope Process -Force
 
 ## 注意事項
 
-- **Scoop 自動安裝** — script 沒裝過會用 user-level 安裝(不需 admin)。
 - **某些工具裝完需重開 terminal** — script 會 `Refresh-Path` 嘗試刷新;仍 "not in PATH" 就重開 PowerShell 再驗證:
   ```powershell
   git --version; gh --version; node --version; claude --version
@@ -122,17 +121,6 @@ session 一開會看到 `individual-agent` 的守則提示。
 你拿到的是**含中文字元的舊版** `.ps1`。PowerShell 5.1 把無 BOM 的下載檔當系統 ANSI(繁中機 Big5/cp950)讀,中文被讀壞、script 載不進去。最新版已改**純 ASCII**(中文移到 `TUTOR_PLAYBOOK.md`),重抓最新再跑:
 ```powershell
 $f="$env:TEMP\onboard-windows.ps1"; irm https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-windows.ps1 -OutFile $f; powershell -ExecutionPolicy Bypass -File $f
-```
-
-### Scoop 安裝時 `Set-ExecutionPolicy ... ExecutionPolicyOverride`
-
-已跑過 `Set-ExecutionPolicy Bypass -Scope Process` 後,script 內部再設 `Scope CurrentUser` 會印警告 + `$ErrorActionPreference="Stop"` 中止。新版已用 try/catch 修掉。拿到舊版就重抓最新(同上指令)。
-
-### `scoop : 無法辨識……名稱`
-
-Scoop 裝完 PATH 未刷新。**重開 PowerShell** 再跑,或手動:
-```powershell
-$env:Path = [System.Environment]::GetEnvironmentVariable("Path","User") + ";" + $env:Path
 ```
 
 ### `claude plugin marketplace add` 顯示 404
