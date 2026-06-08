@@ -271,36 +271,30 @@ echo "    4. (If skipped above) run /hub setup to configure AgentHUB later"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # ── 11. Guided first session (optional) ─────────────────────
-# Open a CLEAN interactive session in the user's personal repo, then tell them
-# to paste the tutorial command themselves.
+# Auto-start the tutorial: open an interactive session in the personal repo and
+# seed a NATURAL-LANGUAGE prompt that asks Claude to run /domi-guide:guide all —
+# so the tutor greets the user proactively (no "paste this yourself" step the
+# welcome banner would scroll past).
 #
-# Why not auto-run it: `exec claude "/domi-guide:guide all"` HANGS on some
-# macOS setups (startup prompt + re-exec + /dev/tty interaction). Dropping the
-# user into a clean session and having them paste the command is rock-solid.
-# Use the FULL name `/domi-guide:guide all` (bare `/guide` is only an in-session
-# auto-complete alias, not always reliable).
+# Why a natural-language prompt (not the slash command directly): a startup
+# prompt STARTING WITH `/` is parsed as a command and HANGS the interactive
+# session on some Macs. A plain-text prompt (first char ≠ `/`) is handled as a
+# normal message — Claude then runs the command itself. Verified: this triggers
+# the tutorial opening; plugin-missing → Claude reports it (we ask it to).
 TUTOR_DIR="$DOMI_PROJECT_DIR"
 if [[ -n "${GH_HANDLE:-}" && -d "$DOMI_PROJECT_DIR/agent-$GH_HANDLE/.git" ]]; then
   TUTOR_DIR="$DOMI_PROJECT_DIR/agent-$GH_HANDLE"   # start in your personal repo
 fi
+TUTOR_PROMPT="請用 /domi-guide:guide all 指令開始 DOMI 新人互動教學;全程繁體中文,先自我介紹 + 列出全部主題 + 問我準備好了沒,再等我回覆。若找不到該指令,請直接告訴我 domi-guide plugin 沒裝成功、要找 Corey。"
 
 if [[ -z "${DOMI_NONINTERACTIVE:-}" ]] && command -v claude &>/dev/null; then
   echo ""
   printf '  Start the guided tutorial now? [Y/n] '
   read -r START_TUTORIAL </dev/tty
   if [[ ! "$START_TUTORIAL" =~ ^[nN]$ ]]; then
+    info "Launching tutorial — 導師會主動開場。/exit 離開;之後任何 session 打 /guide 可續。"
     echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  ✅ Claude session 開啟後,把下面這一行整段複製貼上,按 Enter:"
-    echo ""
-    echo "        /domi-guide:guide all"
-    echo ""
-    echo "  教學就會開始。/exit 離開;之後任何 session 打 /guide 從上次繼續。"
-    echo "  ⚠️ 顯示 Unknown command → domi-guide 沒裝成功,找 Corey,或"
-    echo "     claude plugin install domi-guide@domi-claude-plugins"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
-    cd "$TUTOR_DIR" && exec claude </dev/tty
+    cd "$TUTOR_DIR" && exec claude "$TUTOR_PROMPT" </dev/tty
   fi
-  info "Skipped. Start anytime: open a claude session and paste  /domi-guide:guide all"
+  info "Skipped. 開 claude session 後打 /guide 開始教學。"
 fi
