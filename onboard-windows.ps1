@@ -144,23 +144,64 @@ Info "Setting up project directory: $DOMI_PROJECT_DIR"
 New-Item -ItemType Directory -Force -Path $DOMI_PROJECT_DIR | Out-Null
 
 # -- 7b. Personal agent repo (your "drawer") -----------------
-# gh is installed + authenticated by now, so clone the person's own
-# agent-<handle> repo first - their home base (notes / reports / drafts;
-# individual-agent plugin governs it). Cross-repo work goes via /hub run.
-Info "Cloning your personal agent repo..."
-$ghHandle = (gh api user --jq ".login" 2>$null)
+# Each person now OWNS their personal agent repo on THEIR OWN GitHub account as
+# agent-self-<handle> (was: a shared domiearth/agent-<handle> org repo we cloned).
+# Keeps personal drawers off the org (cost + clear ownership). One-time migration:
+# if a legacy domiearth/agent-<handle> (or a local clone) exists, copy its data
+# into the new repo and commit + push. individual-agent plugin governs it.
+Info "Setting up your personal agent repo (on your own GitHub account)..."
+$ghHandle   = (gh api user --jq ".login" 2>$null)
+$newRepo    = "agent-self-$ghHandle"
+$newDir     = "$DOMI_PROJECT_DIR\$newRepo"
+$legacyRepo = "agent-$ghHandle"
+$legacyDir  = "$DOMI_PROJECT_DIR\$legacyRepo"
 if (-not $ghHandle) {
-    Warn "Could not read your GitHub handle - skipping. Clone later: gh repo clone domiearth/agent-<your-handle>"
-} elseif (Test-Path "$DOMI_PROJECT_DIR\agent-$ghHandle\.git") {
-    Ok "agent-$ghHandle already cloned"
+    Warn "Could not read your GitHub handle - skipping. Create later: gh repo create <your-handle>/agent-self-<your-handle> --private"
+} elseif (Test-Path "$newDir\.git") {
+    Ok "$newRepo already set up"
 } else {
-    gh repo view "domiearth/agent-$ghHandle" 2>$null | Out-Null
+    gh repo view "$ghHandle/$newRepo" 2>$null | Out-Null
     if ($LASTEXITCODE -eq 0) {
-        gh repo clone "domiearth/agent-$ghHandle" "$DOMI_PROJECT_DIR\agent-$ghHandle"
-        if ($LASTEXITCODE -eq 0) { Ok "cloned agent-$ghHandle - your personal workspace" }
-        else { Warn "clone failed - retry later: gh repo clone domiearth/agent-$ghHandle" }
+        # Already created on a previous run / another machine - just clone it.
+        gh repo clone "$ghHandle/$newRepo" "$newDir"
+        if ($LASTEXITCODE -eq 0) { Ok "cloned $newRepo - your personal workspace" }
+        else { Warn "clone failed - retry later: gh repo clone $ghHandle/$newRepo" }
     } else {
-        Warn "Personal agent repo domiearth/agent-$ghHandle not found yet. Ask Corey (domi-init); you can still work via /hub run."
+        # Create fresh under YOUR account, migrating legacy data if any exists.
+        New-Item -ItemType Directory -Force -Path $newDir | Out-Null
+        Push-Location $newDir; git init -q; Pop-Location
+        $migSrc = ""
+        if (Test-Path "$legacyDir\.git") {
+            $migSrc = $legacyDir
+        } else {
+            gh repo view "domiearth/$legacyRepo" 2>$null | Out-Null
+            if ($LASTEXITCODE -eq 0) {
+                Info "Found legacy domiearth/$legacyRepo - migrating its data..."
+                $migSrc = Join-Path ([System.IO.Path]::GetTempPath()) $legacyRepo
+                if (Test-Path $migSrc) { Remove-Item -Recurse -Force $migSrc }
+                gh repo clone "domiearth/$legacyRepo" "$migSrc" 2>$null | Out-Null
+                if ($LASTEXITCODE -ne 0) { $migSrc = "" }
+            }
+        }
+        if ($migSrc -ne "") {
+            # robocopy returns 0-7 on success; ignore its exit code. /XD skips the source .git.
+            robocopy "$migSrc" "$newDir" /E /XD "$migSrc\.git" | Out-Null
+            Info "Migrated data from $legacyRepo."
+        }
+        Push-Location $newDir
+        git add -A
+        if (-not (git diff --cached --name-only)) {
+            "# $newRepo`r`n`r`nDOMI personal agent drawer - notes / reports / drafts. Owner-only." | Out-File -Encoding utf8 README.md
+            git add README.md
+        }
+        $msg = "init $newRepo"
+        if ($migSrc -ne "") { $msg = "init $newRepo (migrated from $legacyRepo)" }
+        git commit -q -m $msg
+        git branch -M main
+        gh repo create "$ghHandle/$newRepo" --private --source=. --remote=origin --push -d "DOMI personal agent drawer ($ghHandle)"
+        if ($LASTEXITCODE -eq 0) { Ok "created + pushed $newRepo" }
+        else { Warn "create/push failed - finish later: cd $newDir; gh repo create $ghHandle/$newRepo --private --source=. --remote=origin --push" }
+        Pop-Location
     }
 }
 
@@ -262,10 +303,10 @@ if ($installWB -match '^[yY]$') {
 Write-Host ""
 Write-Host "  Next steps:"
 Write-Host "    1. Open Claude Desktop and sign in (account from Corey)"
-if ($ghHandle -and (Test-Path "$DOMI_PROJECT_DIR\agent-$ghHandle\.git")) {
-    Write-Host "    2. Your personal workspace: cd $DOMI_PROJECT_DIR\agent-$ghHandle; claude"
+if ($ghHandle -and (Test-Path "$newDir\.git")) {
+    Write-Host "    2. Your personal workspace: cd $newDir; claude"
 } else {
-    Write-Host "    2. Clone your personal repo: gh repo clone domiearth/agent-<your-handle>"
+    Write-Host "    2. Create your personal repo: gh repo create <your-handle>/agent-self-<your-handle> --private"
 }
 Write-Host "    3. New here? The guided tour starts next - or type /guide anytime."
 Write-Host "    4. (If skipped above) run /hub setup to configure AgentHUB later"
@@ -282,8 +323,8 @@ Write-Host "    git --version && gh --version && node --version && claude --vers
 # plain text is a normal message Claude then acts on. Prompt is ASCII (this file
 # must stay ASCII) but instructs Claude to reply in Traditional Chinese.
 $tutorDir = $DOMI_PROJECT_DIR
-if ($ghHandle -and (Test-Path "$DOMI_PROJECT_DIR\agent-$ghHandle\.git")) {
-    $tutorDir = "$DOMI_PROJECT_DIR\agent-$ghHandle"   # start in your personal repo
+if ($ghHandle -and (Test-Path "$newDir\.git")) {
+    $tutorDir = "$newDir"   # start in your personal repo
 }
 $tutorPrompt = "Please run the /domi-guide:guide all command to start the DOMI new-hire tutorial. Reply in Traditional Chinese throughout; first introduce yourself, list all topics, ask if I'm ready, then wait for my reply. If the command is not found, tell me the domi-guide plugin failed to install and to contact Corey."
 

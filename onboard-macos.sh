@@ -139,23 +139,49 @@ info "Setting up project directory: $DOMI_PROJECT_DIR"
 mkdir -p "$DOMI_PROJECT_DIR"
 
 # ── 7b. Personal agent repo (your "drawer") ─────────────────
-# gh is installed + authenticated by now, so clone the person's own
-# agent-<handle> repo first — it's their home base (notes / reports / drafts;
-# individual-agent plugin governs it). Cross-repo work goes via /hub run.
-info "Cloning your personal agent repo..."
+# Each person now OWNS their personal agent repo on THEIR OWN GitHub account as
+# agent-self-<handle> (was: a shared domiearth/agent-<handle> org repo we cloned).
+# Keeps personal drawers off the org (cost + clear ownership). One-time migration:
+# if a legacy domiearth/agent-<handle> (or a local clone) exists, we copy its data
+# into the new repo and commit + push. individual-agent plugin governs it.
+info "Setting up your personal agent repo (on your own GitHub account)..."
 GH_HANDLE=$(gh api user --jq '.login' 2>/dev/null || echo "")
+NEW_REPO="agent-self-$GH_HANDLE"
+NEW_DIR="$DOMI_PROJECT_DIR/$NEW_REPO"
+LEGACY_REPO="agent-$GH_HANDLE"
+LEGACY_DIR="$DOMI_PROJECT_DIR/$LEGACY_REPO"
 if [[ -z "$GH_HANDLE" ]]; then
   warn "Could not read your GitHub handle (gh not authenticated?) — skipping."
-  warn "  Clone later with: gh repo clone domiearth/agent-<your-handle>"
-elif [[ -d "$DOMI_PROJECT_DIR/agent-$GH_HANDLE/.git" ]]; then
-  ok "agent-$GH_HANDLE already cloned"
-elif gh repo view "domiearth/agent-$GH_HANDLE" &>/dev/null; then
-  gh repo clone "domiearth/agent-$GH_HANDLE" "$DOMI_PROJECT_DIR/agent-$GH_HANDLE" \
-    && ok "cloned agent-$GH_HANDLE — your personal workspace" \
-    || warn "clone failed — retry later: gh repo clone domiearth/agent-$GH_HANDLE"
+  warn "  Create later: gh repo create <your-handle>/agent-self-<your-handle> --private"
+elif [[ -d "$NEW_DIR/.git" ]]; then
+  ok "$NEW_REPO already set up"
+elif gh repo view "$GH_HANDLE/$NEW_REPO" &>/dev/null; then
+  # Already created on a previous run / another machine — just clone it.
+  gh repo clone "$GH_HANDLE/$NEW_REPO" "$NEW_DIR" \
+    && ok "cloned $NEW_REPO — your personal workspace" \
+    || warn "clone failed — retry later: gh repo clone $GH_HANDLE/$NEW_REPO"
 else
-  warn "Personal agent repo domiearth/agent-$GH_HANDLE not found yet."
-  warn "  Ask Corey to create it (domi-init). You can still work via /hub run."
+  # Create it fresh under YOUR account, migrating legacy data if any exists.
+  mkdir -p "$NEW_DIR" && ( cd "$NEW_DIR" && git init -q )
+  MIG_SRC=""
+  if [[ -d "$LEGACY_DIR/.git" ]]; then
+    MIG_SRC="$LEGACY_DIR"
+  elif gh repo view "domiearth/$LEGACY_REPO" &>/dev/null; then
+    info "Found legacy domiearth/$LEGACY_REPO — migrating its data..."
+    MIG_SRC="$(mktemp -d)/$LEGACY_REPO"
+    gh repo clone "domiearth/$LEGACY_REPO" "$MIG_SRC" &>/dev/null || MIG_SRC=""
+  fi
+  [[ -n "$MIG_SRC" ]] && rsync -a --exclude='.git' "$MIG_SRC"/ "$NEW_DIR"/ 2>/dev/null \
+    && info "Migrated data from $LEGACY_REPO."
+  ( cd "$NEW_DIR" \
+      && git add -A \
+      && { git diff --cached --quiet && printf '# %s\n\nDOMI personal agent drawer — notes / reports / drafts. Owner-only.\n' "$NEW_REPO" > README.md && git add README.md || true; } \
+      && git commit -q -m "init $NEW_REPO${MIG_SRC:+ (migrated from $LEGACY_REPO)}" \
+      && git branch -M main ) \
+    && gh repo create "$GH_HANDLE/$NEW_REPO" --private --source="$NEW_DIR" --remote=origin --push \
+         -d "DOMI personal agent drawer ($GH_HANDLE)" \
+    && ok "created + pushed $NEW_REPO${MIG_SRC:+ (migrated from $LEGACY_REPO)}" \
+    || warn "create/push failed — finish later: cd $NEW_DIR && gh repo create $GH_HANDLE/$NEW_REPO --private --source=. --remote=origin --push"
 fi
 
 # ── 8. claude-workbench (optional) ──────────────────────────
@@ -261,10 +287,10 @@ echo "    domi-guide       ✅  /guide interactive tutorial"
 echo ""
 echo "  Next steps:"
 echo "    1. Open Claude Desktop and sign in (account from Corey)"
-if [[ -n "${GH_HANDLE:-}" && -d "$DOMI_PROJECT_DIR/agent-$GH_HANDLE/.git" ]]; then
-  echo "    2. Your personal workspace: cd $DOMI_PROJECT_DIR/agent-$GH_HANDLE && claude"
+if [[ -n "${GH_HANDLE:-}" && -d "$NEW_DIR/.git" ]]; then
+  echo "    2. Your personal workspace: cd $NEW_DIR && claude"
 else
-  echo "    2. Clone your personal repo: gh repo clone domiearth/agent-<your-handle>"
+  echo "    2. Create your personal repo: gh repo create <your-handle>/agent-self-<your-handle> --private"
 fi
 echo "    3. New here? The guided tour starts next — or type /guide anytime."
 echo "    4. (If skipped above) run /hub setup to configure AgentHUB later"
@@ -282,8 +308,8 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 # normal message — Claude then runs the command itself. Verified: this triggers
 # the tutorial opening; plugin-missing → Claude reports it (we ask it to).
 TUTOR_DIR="$DOMI_PROJECT_DIR"
-if [[ -n "${GH_HANDLE:-}" && -d "$DOMI_PROJECT_DIR/agent-$GH_HANDLE/.git" ]]; then
-  TUTOR_DIR="$DOMI_PROJECT_DIR/agent-$GH_HANDLE"   # start in your personal repo
+if [[ -n "${GH_HANDLE:-}" && -d "$NEW_DIR/.git" ]]; then
+  TUTOR_DIR="$NEW_DIR"   # start in your personal repo
 fi
 TUTOR_PROMPT="請用 /domi-guide:guide all 指令開始 DOMI 新人互動教學;全程繁體中文,先自我介紹 + 列出全部主題 + 問我準備好了沒,再等我回覆。若找不到該指令,請直接告訴我 domi-guide plugin 沒裝成功、要找 Corey。"
 
