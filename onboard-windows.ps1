@@ -184,6 +184,13 @@ New-Item -ItemType Directory -Force -Path $DOMI_PROJECT_DIR | Out-Null
 # if a legacy domiearth/agent-<handle> (or a local clone) exists, copy its data
 # into the new repo and commit + push. individual-agent plugin governs it.
 Info "Setting up your personal agent repo (on your own GitHub account)..."
+# gh/git write progress and "Could not resolve to a Repository" to stderr. Under
+# $ErrorActionPreference='Stop' (set at top) PS 5.1 turns that stderr into a
+# terminating NativeCommandError - so `gh repo view` on a not-yet-created repo
+# would crash here instead of falling through to the create branch below. Relax
+# to Continue for this block; correctness still gated on $LASTEXITCODE.
+$prevEAP = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
 $ghHandle   = (gh api user --jq ".login" 2>$null)
 $newRepo    = "agent-self-$ghHandle"
 $newDir     = "$DOMI_PROJECT_DIR\$newRepo"
@@ -238,6 +245,7 @@ if (-not $ghHandle) {
         Pop-Location
     }
 }
+$ErrorActionPreference = $prevEAP
 
 # -- 8. claude-workbench (optional) --------------------------
 
