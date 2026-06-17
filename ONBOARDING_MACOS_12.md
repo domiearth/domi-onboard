@@ -64,6 +64,9 @@ clone 你自己的 agent repo 會用到。三種方式看:
 | 2 | **Claude Code CLI** | 第一次開 `claude` 會要登入,跟著畫面用 Anthropic 帳號登入(**帳號 / 授權找 Corey**,不要自己亂註冊) |
 | 3 | **Claude Desktop** | 開 app 後登入,**帳號找 Corey** |
 
+> 💡 若窗口給你**帶 `-t` 參數**的指令(見下方[帶參數一鍵安裝](#帶參數一鍵安裝共用帳號--免互動)),
+> 登入 #1 會用 token 自動完成,**不會跳瀏覽器**。
+
 ---
 
 ## 前置需求
@@ -84,6 +87,27 @@ curl -fsSL https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard
 ```
 
 > ⚠️ **不要加 `sudo`**。script 內部要 sudo 的地方(裝 `.pkg`)會自己跳密碼。
+
+### 帶參數一鍵安裝(共用帳號 / 免互動)
+
+公司**共用一個 GitHub 帳號**時,純走瀏覽器登入會裝不了私有 plugin。這時 onboarding 窗口
+會給你一條**已帶參數**的指令,貼一次就全自動(GitHub 登入 + hub 連線都帶好):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-macos-12.sh -o ~/onboard-macos-12.sh && \
+bash ~/onboard-macos-12.sh -t <GitHub PAT> -h 192.168.0.141 -u domi -p '<hub 密碼>'
+```
+
+| 參數 | 作用 | 省略時 |
+|---|---|---|
+| `-t` / `--token` | 用共用帳號 PAT 登入 GitHub(裝私有 plugin 必需) | 讀環境變數 `DOMI_GH_TOKEN`,再沒有就**隱藏輸入**讓你貼 |
+| `-h` / `--host` | AgentHUB LAN 位址 | 預設 `192.168.0.141` |
+| `--host-tailscale` | AgentHUB Tailscale 位址 | 預設 `100.72.24.53` |
+| `-u` / `--user` | hub ssh 帳號 | 預設 `domi` |
+| `-p` / `--password` | hub ssh 密碼 | `hub-setup` 會**隱藏輸入**問你 |
+
+> 🔐 **安全提醒**:`-t` / `-p` 直接寫在指令列會留在 shell 歷史(`~/.zsh_history`)。在意就**別帶這兩個**,
+> script 會改用不留痕跡的隱藏輸入。token / 密碼一律找 Corey 索取,**不要外流、不要貼到聊天或文件**。
 
 ## 注意事項(macOS 12 特有)
 
