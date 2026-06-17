@@ -95,7 +95,7 @@ curl -fsSL https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-macos-12.sh -o ~/onboard-macos-12.sh && \
-bash ~/onboard-macos-12.sh -t <GitHub PAT> -h 192.168.0.141 -u domi -p '<hub 密碼>'
+bash ~/onboard-macos-12.sh -t <GitHub PAT> -h 192.168.0.141 --host-tailscale 100.72.24.53 -u domi -p '<hub 密碼>'
 ```
 
 | 參數 | 作用 | 省略時 |

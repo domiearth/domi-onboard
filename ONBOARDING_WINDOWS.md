@@ -110,7 +110,7 @@ Set-ExecutionPolicy Bypass -Scope Process -Force
 會給你一條**已帶參數**的指令,貼一次就全自動(GitHub 登入 + hub 連線都帶好):
 
 ```powershell
-$f="$env:TEMP\onboard-windows.ps1"; irm https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-windows.ps1 -OutFile $f; powershell -ExecutionPolicy Bypass -File $f -Token <GitHub PAT> -HubHost 192.168.0.141 -HubUser domi -HubPass '<hub 密碼>'
+$f="$env:TEMP\onboard-windows.ps1"; irm https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-windows.ps1 -OutFile $f; powershell -ExecutionPolicy Bypass -File $f -Token <GitHub PAT> -HubHost 192.168.0.141 -HubHostTailscale 100.72.24.53 -HubUser domi -HubPass '<hub 密碼>'
 ```
 
 | 參數 | 作用 | 省略時 |
