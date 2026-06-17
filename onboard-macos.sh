@@ -3,8 +3,18 @@ set -euo pipefail
 
 # ──────────────────────────────────────────────────────────────
 # DOMI onboarding — macOS
-# Usage: curl -fsSL <raw-url> | bash
-#    or: bash onboard-macos.sh
+#
+# Usage:
+#   bash onboard-macos.sh [-t GH_TOKEN] [-h HUB_HOST]
+#   curl -fsSL <raw-url> -o ~/onboard.sh && bash ~/onboard.sh -t <token> -h 192.168.0.141
+#
+#   -t / --token            共用帳號的 GitHub PAT(私有 marketplace + repo 都靠它)。
+#                           省略則讀環境變數 DOMI_GH_TOKEN,再省略則隱藏輸入(不進 history)。
+#   -h / --host             AgentHUB LAN 位址(預設 192.168.0.141);傳給 hub-setup。
+#   --host-tailscale        AgentHUB Tailscale 位址(預設 100.72.24.53);傳給 hub-setup。
+#   -u / --user             hub ssh 帳號(預設 domi);傳給 hub-setup。
+#   -p / --password         hub ssh 密碼;傳給 hub-setup。省略則 hub-setup 隱藏輸入。
+#   注意:token / 密碼寫在指令列會留在 shell history。要乾淨就別帶,讓它隱藏輸入。
 # ──────────────────────────────────────────────────────────────
 
 DOMI_PROJECT_DIR="$HOME/project"
@@ -41,13 +51,31 @@ if [[ ! -t 0 && -z "${DOMI_ONBOARD_REEXEC:-}" ]]; then
   if [[ -r /dev/tty ]]; then
     _self="$(mktemp "${TMPDIR:-/tmp}/onboard-macos.XXXXXX.sh")"
     if curl -fsSL "$DOMI_ONBOARD_URL" -o "$_self"; then
-      exec env DOMI_ONBOARD_REEXEC=1 bash "$_self" </dev/tty
+      exec env DOMI_ONBOARD_REEXEC=1 bash "$_self" "$@" </dev/tty
     fi
     rm -f "$_self"
     warn "Could not re-fetch script for interactive run; continuing non-interactively."
   fi
   export DOMI_NONINTERACTIVE=1
 fi
+
+# ── arg parsing (-t token / -h hub host) ─────────────────────
+GH_TOKEN_ARG="${DOMI_GH_TOKEN:-}"
+HUB_HOST_ARG=""
+HUB_HOST_TS_ARG=""
+HUB_USER_ARG=""
+HUB_PASS_ARG=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -t|--token)                   GH_TOKEN_ARG="${2:-}"; shift 2 ;;
+    -h|--host)                    HUB_HOST_ARG="${2:-}"; shift 2 ;;
+    --host-tailscale|--tailscale) HUB_HOST_TS_ARG="${2:-}"; shift 2 ;;
+    -u|--user)                    HUB_USER_ARG="${2:-}"; shift 2 ;;
+    -p|--password|--pass)         HUB_PASS_ARG="${2:-}"; shift 2 ;;
+    --help)                       echo "Usage: bash onboard-macos.sh [-t GH_TOKEN] [-h HUB_HOST] [--host-tailscale TS] [-u HUB_USER] [-p HUB_PASS]"; exit 0 ;;
+    *)                            warn "Unknown argument: $1"; shift ;;
+  esac
+done
 
 # ── 0. Homebrew ──────────────────────────────────────────────
 
@@ -125,11 +153,22 @@ fi
 
 # ── 6. GitHub authentication ────────────────────────────────
 
+# 共用帳號:用 PAT 登入(--with-token),省去每個人各自跑 web 流程。
+# token 來源優先序:-t 參數 → DOMI_GH_TOKEN 環境變數 → 隱藏輸入(不進 history)。
 info "Checking GitHub auth..."
-if gh auth status &>/dev/null; then
+if [[ -z "$GH_TOKEN_ARG" && -z "${DOMI_NONINTERACTIVE:-}" ]] && ! gh auth status &>/dev/null; then
+  info "貼上共用帳號的 GitHub PAT(輸入不會顯示,也不會留在 history)..."
+  read -r -s -p "  GitHub PAT: " GH_TOKEN_ARG </dev/tty; echo ""
+fi
+if [[ -n "$GH_TOKEN_ARG" ]]; then
+  printf '%s' "$GH_TOKEN_ARG" | gh auth login --with-token \
+    && ok "GitHub 已用 token 登入(共用帳號)" \
+    || fail "Token 登入失敗 — 檢查 -t 的 PAT(scope 要含 repo / read:org)。"
+  gh auth setup-git 2>/dev/null || true   # 讓 git clone 私有 repo 走 gh 憑證
+elif gh auth status &>/dev/null; then
   ok "Already authenticated to GitHub"
 else
-  info "Please authenticate with GitHub..."
+  info "沒有 token — 改用互動式登入(選 HTTPS + web browser)..."
   gh auth login
 fi
 
@@ -255,12 +294,18 @@ ok "domi-claude-plugins done"
 echo ""
 info "AgentHUB connection setup"
 HUB_SETUP=$(ls "$HOME"/.claude/plugins/cache/domi-claude-plugins/hub-relay/*/scripts/hub-setup.sh 2>/dev/null | sort -V | tail -1)
+HUB_ARGS=()
+[[ -n "$HUB_HOST_ARG" ]]    && HUB_ARGS+=(--host "$HUB_HOST_ARG")
+[[ -n "$HUB_HOST_TS_ARG" ]] && HUB_ARGS+=(--host-tailscale "$HUB_HOST_TS_ARG")
+[[ -n "$HUB_USER_ARG" ]]    && HUB_ARGS+=(--user "$HUB_USER_ARG")
+[[ -n "$HUB_PASS_ARG" ]]    && HUB_ARGS+=(--password "$HUB_PASS_ARG")
+[[ -n "${GH_HANDLE:-}" ]]   && HUB_ARGS+=(--github "$GH_HANDLE")
 if [[ -n "${DOMI_NONINTERACTIVE:-}" ]]; then
   info "Non-interactive — skipping. Configure later: /hub setup (or run hub-setup.sh)."
 elif [[ -n "$HUB_SETUP" ]]; then
   info "Launching hub-setup (host / user / password / your GitHub account)..."
   echo "  Don't have the hub host/creds yet? Press Enter through to skip — run it later."
-  bash "$HUB_SETUP" </dev/tty || warn "hub-setup skipped/failed — run later: bash $HUB_SETUP"
+  bash "$HUB_SETUP" ${HUB_ARGS[@]+"${HUB_ARGS[@]}"} </dev/tty || warn "hub-setup skipped/failed — run later: bash $HUB_SETUP"
 else
   warn "hub-relay hub-setup.sh not found (plugin install may have failed)."
   warn "  Configure later from any Claude session with: /hub setup"

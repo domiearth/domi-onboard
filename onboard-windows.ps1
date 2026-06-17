@@ -3,6 +3,14 @@
 # Usage: Run as Administrator
 #   Set-ExecutionPolicy Bypass -Scope Process -Force
 #   .\onboard-windows.ps1
+#   .\onboard-windows.ps1 -Token <PAT> -HubHost 192.168.0.141 -HubHostTailscale 100.72.24.53 -HubUser domi -HubPass <pw>
+#
+#   -Token             shared-account GitHub PAT (private marketplace + repos use it).
+#                      Omit to read env DOMI_GH_TOKEN, then fall back to a hidden prompt.
+#   -HubHost           AgentHUB LAN address       (passed to hub-setup, default 192.168.0.141)
+#   -HubHostTailscale  AgentHUB Tailscale address (passed to hub-setup, default 100.72.24.53)
+#   -HubUser           hub ssh user               (passed to hub-setup, default domi)
+#   -HubPass           hub ssh password           (passed to hub-setup; note: lands in shell history)
 #
 # !! KEEP THIS FILE PURE ASCII !!  Windows PowerShell 5.1 reads a BOM-less
 # download (what `irm -OutFile` produces) as the system ANSI codepage, so any
@@ -11,9 +19,18 @@
 # fetched at runtime, never parsed by PowerShell.
 # --------------------------------------------------------------
 
+param(
+    [string]$Token = "",
+    [string]$HubHost = "",
+    [string]$HubHostTailscale = "",
+    [string]$HubUser = "",
+    [string]$HubPass = ""
+)
+
 $ErrorActionPreference = "Stop"
 
 $DOMI_PROJECT_DIR = "$env:USERPROFILE\project"
+if (-not $Token -and $env:DOMI_GH_TOKEN) { $Token = $env:DOMI_GH_TOKEN }
 
 # -- helpers --------------------------------------------------
 
@@ -129,12 +146,29 @@ if ($claudeDesktop -or (Test-Path $claudeDesktopPath)) {
 
 # -- 6. GitHub authentication --------------------------------
 
+# Shared account: log in via PAT (--with-token) so each person skips the web flow.
+# Token source order: -Token param -> env DOMI_GH_TOKEN -> hidden prompt (not in history).
 Info "Checking GitHub auth..."
-$authStatus = gh auth status 2>&1
-if ($LASTEXITCODE -eq 0) {
+gh auth status 2>&1 | Out-Null
+$alreadyAuthed = ($LASTEXITCODE -eq 0)
+if (-not $Token -and -not $alreadyAuthed) {
+    $secureT = Read-Host "Paste shared-account GitHub PAT (hidden)" -AsSecureString
+    $bstrT = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureT)
+    $Token = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstrT)
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstrT)
+}
+if ($Token) {
+    $Token | gh auth login --with-token
+    if ($LASTEXITCODE -eq 0) {
+        Ok "GitHub authenticated via token (shared account)"
+        gh auth setup-git 2>$null   # let git clone private repos via gh credentials
+    } else {
+        Fail "Token login failed - check the -Token PAT (scopes: repo / read:org)."
+    }
+} elseif ($alreadyAuthed) {
     Ok "Already authenticated to GitHub"
 } else {
-    Info "Please authenticate with GitHub..."
+    Info "No token - falling back to interactive login (HTTPS + web browser)..."
     gh auth login
 }
 
@@ -275,7 +309,13 @@ $hubSetup = Get-ChildItem "$env:USERPROFILE\.claude\plugins\cache\domi-claude-pl
 if ($hubSetup) {
     Info "Launching hub-setup (host / user / password / your GitHub account)..."
     Write-Host "  Don't have the hub host/creds yet? Press Enter through to skip - run it later."
-    try { & $hubSetup.FullName } catch { Warn "hub-setup skipped/failed - run later: $($hubSetup.FullName)" }
+    $hubArgs = @{}
+    if ($HubHost)          { $hubArgs["HubHost"]          = $HubHost }
+    if ($HubHostTailscale) { $hubArgs["HubHostTailscale"] = $HubHostTailscale }
+    if ($HubUser)          { $hubArgs["HubUser"]          = $HubUser }
+    if ($HubPass)          { $hubArgs["HubPass"]          = $HubPass }
+    if ($ghHandle)         { $hubArgs["GithubAccount"]    = $ghHandle }
+    try { & $hubSetup.FullName @hubArgs } catch { Warn "hub-setup skipped/failed - run later: $($hubSetup.FullName)" }
 } else {
     Warn "hub-relay hub-setup.ps1 not found (plugin install may have failed)."
     Warn "  Configure later from any Claude session with: /hub setup"
