@@ -163,8 +163,14 @@ fi
 if [[ -n "$GH_TOKEN_ARG" ]]; then
   printf '%s' "$GH_TOKEN_ARG" | gh auth login --with-token \
     && ok "GitHub 已用 token 登入(共用帳號)" \
-    || fail "Token 登入失敗 — 檢查 -t 的 PAT(scope 要含 repo / read:org)。"
+    || fail "Token 登入失敗 — 檢查 PAT(建議 fine-grained、只授權 domi-claude-plugins 的 Contents: Read)。"
   gh auth setup-git 2>/dev/null || true   # 讓 git clone 私有 repo 走 gh 憑證
+  # 持久化唯讀 token 給 plugin 自動更新器「自我內含」使用:domi-guide 背景 worker 會讀它
+  # export GH_TOKEN,即使 gh 被清/未裝/在乾淨環境也照樣更新,不再靜默吃 stale cache。
+  # chmod 600、絕不進任何 git。建議搭配 fine-grained、單 repo、唯讀 PAT 把外洩風險降到最低。
+  AU_DIR="$HOME/.claude/.domi-autoupdate"; mkdir -p "$AU_DIR"
+  ( umask 177; printf '%s' "$GH_TOKEN_ARG" > "$AU_DIR/gh-token" )
+  ok "已存唯讀 token 供 plugin 自動更新(~/.claude/.domi-autoupdate/gh-token,chmod 600)"
 elif gh auth status &>/dev/null; then
   ok "Already authenticated to GitHub"
 else

@@ -162,8 +162,18 @@ if ($Token) {
     if ($LASTEXITCODE -eq 0) {
         Ok "GitHub authenticated via token (shared account)"
         gh auth setup-git 2>$null   # let git clone private repos via gh credentials
+        # Persist the read-only token so domi-guide's auto-update worker is self-contained:
+        # it reads this and exports GH_TOKEN, so updates work even if gh state is cleared/absent.
+        # Never committed to git; recommend a fine-grained, single-repo, read-only PAT.
+        $auDir = Join-Path $env:USERPROFILE ".claude\.domi-autoupdate"
+        New-Item -ItemType Directory -Force -Path $auDir | Out-Null
+        $tokFile = Join-Path $auDir "gh-token"
+        [IO.File]::WriteAllText($tokFile, $Token)
+        # Lock down ACL to the current user only (closest Windows equivalent of chmod 600).
+        icacls $tokFile /inheritance:r /grant:r "$($env:USERNAME):F" 2>$null | Out-Null
+        Ok "Saved read-only token for plugin auto-update (~\.claude\.domi-autoupdate\gh-token)"
     } else {
-        Fail "Token login failed - check the -Token PAT (scopes: repo / read:org)."
+        Fail "Token login failed - check the -Token PAT (fine-grained, domi-claude-plugins Contents: Read)."
     }
 } elseif ($alreadyAuthed) {
     Ok "Already authenticated to GitHub"
