@@ -12,6 +12,7 @@ agent_behavior:
   require_issue_context: false
   auto_retrospective: false
   require_adr_on_decision: false
+  session_end_summary: false   # 關閉 Stop hook 的 session-end 摘要(0.3.0 預設為 true)
 templates:
   source: builtin
 integration:
