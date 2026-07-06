@@ -165,6 +165,19 @@ xcode-select --install
 
 `gh` 認證沒拿到 `domiearth` org 存取權:確認已加入 org(找 admin)→ 重跑 `gh auth login`,scope 含 `repo`。
 
+### `gh` 顯示登入的是「共用帳號」(不是我自己)/ 要不要每次 switch?
+
+**不用每次 switch。** onboarding 為了省 GitHub seat,是用**共用帳號 PAT** 登入 `gh`(`gh auth login --with-token`),所以 `gh auth status` 預設 active 身分是共用帳號、不是你本人。
+
+- **plugin 自動更新不受影響** — 它自己讀 `~/.claude/.domi-autoupdate/gh-token`、在背景子程序用該 token fetch,跟 `gh` 現在登入誰**完全無關**;你切成自己帳號也不會弄壞自動更新。
+- **想讓自己的 commit / PR / push 正確歸屬到你本人**(建議):把 `gh` 預設切成你自己的帳號,**切一次就固定**(存在 `~/.config/gh/hosts.yml`,onboarding 不會用環境變數壓過它,不會自己彈回去):
+  ```bash
+  gh auth status                      # 看目前有哪些帳號、誰是 active
+  gh auth switch -u <你的github帳號>   # 切成你自己的(持久,不必每次切)
+  gh auth setup-git                   # 讓 git push 也走你自己的憑證
+  ```
+- 前提:你自己帳號要在 `domiearth` org 裡。跨別人的 repo 一律走 `/hub run`,不靠本機 `gh`。
+
 ### AgentHUB 連線失敗
 
 - `Connection timed out` → 確認在 DOMI LAN 或已連 Tailscale;`ping <hub-host>` 測試
