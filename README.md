@@ -10,6 +10,7 @@
 | 🍎 **Mac(macOS 12 Monterey)** | **[ONBOARDING_MACOS_12.md](./ONBOARDING_MACOS_12.md)** |
 | 🪟 **Windows** | **[ONBOARDING_WINDOWS.md](./ONBOARDING_WINDOWS.md)** |
 | 🖥️ **AgentHUB**(共用主機,通常有人帶) | **[ONBOARDING_AGENTHUB.md](./ONBOARDING_AGENTHUB.md)** |
+| 📱 **iPad**(只看狀態 / 派工,**不寫 code**) | **[ONBOARDING_IPAD.md](./ONBOARDING_IPAD.md)** |
 
 > 🚀 **上線當天**:跑 [`GO_LIVE_CHECKLIST.md`](./GO_LIVE_CHECKLIST.md) 自檢(10 分鐘)。
 
@@ -23,6 +24,7 @@
 | [`onboard-macos-12.sh`](./onboard-macos-12.sh) | macOS **12 (Monterey)** — 不用 Homebrew,避開慢編譯 | 個人 dev 機(舊系統) |
 | [`onboard-windows.ps1`](./onboard-windows.ps1) | Windows 10/11(PowerShell 5.1+) | 個人 dev 機 |
 | [`onboard-agenthub.sh`](./onboard-agenthub.sh) | Ubuntu 22.04+ / 24.04 LTS | AgentHUB server |
+| *(無 script)* | **iPadOS** — sandbox 跑不了 shell/Node,見 [ONBOARDING_IPAD.md](./ONBOARDING_IPAD.md) 的分析 | thin client(Tailscale + Safari) |
 
 跑完會裝好:git、gh CLI、Node.js 22、Claude Code CLI、Claude Desktop、DOMI marketplace + plugin,並設定好 AgentHUB 連線。整個流程 **idempotent**(已裝的跳過,重跑安全)。
 
