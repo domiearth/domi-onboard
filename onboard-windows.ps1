@@ -309,7 +309,7 @@ if ($marketplaceList -match "domi-claude-plugins") {
 # hub enforces them server-side. See domi-claude-plugins README (install matrix)
 # + GO_LIVE_CHECKLIST.md section 1.
 Info "Installing / updating DOMI plugins from marketplace..."
-foreach ($plugin in @("individual-agent", "hub-relay", "domi-guide")) {
+foreach ($plugin in @("individual-agent", "hub-relay", "domi-guide", "asset")) {
     Info "  Installing / updating $plugin..."
     # install = no-op if present; update = bump an already-installed plugin to latest.
     try { claude plugin install "${plugin}@domi-claude-plugins" 2>$null } catch {}
@@ -353,6 +353,7 @@ try { Write-Host "    claude CLI   installed" } catch { Write-Host "    claude C
 Write-Host ""
 Write-Host "  Plugins (personal machine, via domi-claude-plugins marketplace):"
 Write-Host "    individual-agent [OK]  your personal repo behaviour + /note"
+Write-Host "    asset            [OK]  /asset:knowledge-* — share results as company assets"
 Write-Host "    hub-relay        [OK]  /hub - work on hub-side project agents"
 Write-Host "    domi-guide       [OK]  /guide interactive tutorial"
 if ($installWB -match '^[yY]$') {

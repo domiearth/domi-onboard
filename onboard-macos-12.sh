@@ -227,7 +227,7 @@ else
   claude plugin marketplace add https://github.com/domiearth/domi-claude-plugins \
     && ok "DOMI marketplace registered" || warn "marketplace add failed (need domiearth org access)"
 fi
-for plugin in individual-agent hub-relay domi-guide; do
+for plugin in individual-agent hub-relay domi-guide asset; do
   info "  Installing / updating $plugin..."
   # install = no-op if present; update = bump an already-installed plugin to latest.
   claude plugin install "${plugin}@domi-claude-plugins" 2>/dev/null || true
@@ -260,7 +260,7 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 ok "DOMI onboarding (macOS 12) complete!"
 echo "    git $(git --version | awk '{print $3}') · gh $(gh --version | head -1 | awk '{print $3}') · node $(node --version) · claude ✅"
-echo "  Plugins: individual-agent · hub-relay · domi-guide"
+echo "  Plugins: individual-agent · hub-relay · domi-guide · asset"
 echo ""
 echo "  Next: 1) 登入 Claude Desktop(帳號找 Corey)"
 if [[ -n "${GH_HANDLE:-}" && -d "$NEW_DIR/.git" ]]; then

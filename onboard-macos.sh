@@ -285,7 +285,7 @@ fi
 # hub enforces them server-side. See domi-claude-plugins README (install matrix)
 # + GO_LIVE_CHECKLIST.md §1.
 info "Installing / updating DOMI plugins from marketplace..."
-for plugin in individual-agent hub-relay domi-guide; do
+for plugin in individual-agent hub-relay domi-guide asset; do
   info "  Installing / updating $plugin..."
   # install = no-op if present; update = bump an already-installed plugin to latest.
   claude plugin install "${plugin}@domi-claude-plugins" 2>/dev/null || true
@@ -332,6 +332,7 @@ echo "    Claude Desktop  $(test -d /Applications/Claude.app && echo '✅' || ec
 echo ""
 echo "  Plugins (personal machine, via domi-claude-plugins marketplace):"
 echo "    individual-agent ✅  your personal repo behaviour + /note"
+echo "    asset            ✅  /asset:knowledge-* — 把成果分享成公司資產"
 echo "    hub-relay        ✅  /hub — work on hub-side project agents"
 echo "    domi-guide       ✅  /guide interactive tutorial"
 [[ "${INSTALL_WORKBENCH:-}" =~ ^[yY]$ ]] && echo "    claude-workbench     ✅ (mentor, kanban, chat)"
