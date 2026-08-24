@@ -5,8 +5,9 @@
 #   .\onboard-windows.ps1
 #   .\onboard-windows.ps1 -Token <PAT> -HubHost 192.168.0.141 -HubHostTailscale 100.72.24.53 -HubUser domi -HubPass <pw>
 #
-#   -Token             shared-account GitHub PAT (private marketplace + repos use it).
-#                      Omit to read env DOMI_GH_TOKEN, then fall back to a hidden prompt.
+#   -Token             (optional, CI/bot only) GitHub PAT. Normal users omit it -
+#                      the default is `gh auth login` with YOUR OWN GitHub account.
+#                      Omit to read env DOMI_GH_TOKEN, then interactive login.
 #   -HubHost           AgentHUB LAN address       (passed to hub-setup, default 192.168.0.141)
 #   -HubHostTailscale  AgentHUB Tailscale address (passed to hub-setup, default 100.72.24.53)
 #   -HubUser           hub ssh user               (passed to hub-setup, default domi)
@@ -146,40 +147,54 @@ if ($claudeDesktop -or (Test-Path $claudeDesktopPath)) {
 
 # -- 6. GitHub authentication --------------------------------
 
-# Shared account: log in via PAT (--with-token) so each person skips the web flow.
-# Token source order: -Token param -> env DOMI_GH_TOKEN -> hidden prompt (not in history).
+# Personal accounts (since 2026-08: org back on Free plan, everyone re-added
+# with their own account): default = interactive `gh auth login` with YOUR OWN
+# GitHub account. This identity flows into agent-self-<handle>, the
+# github_account in ~/.domi-hub.json, and hub-side project-protect tiers -
+# never log in with a shared account again.
+# -Token / env DOMI_GH_TOKEN stays for CI / bot / special cases only (no more
+# hidden prompt); a failed token login now falls back to interactive login
+# instead of aborting the whole onboarding.
 Info "Checking GitHub auth..."
 gh auth status 2>&1 | Out-Null
 $alreadyAuthed = ($LASTEXITCODE -eq 0)
-if (-not $Token -and -not $alreadyAuthed) {
-    $secureT = Read-Host "Paste shared-account GitHub PAT (hidden)" -AsSecureString
-    $bstrT = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureT)
-    $Token = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstrT)
-    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstrT)
-}
-if ($Token) {
+if ($alreadyAuthed) {
+    $who = (gh api user --jq ".login" 2>$null)
+    Ok "Already authenticated to GitHub ($who)"
+} elseif ($Token) {
     $Token | gh auth login --with-token
     if ($LASTEXITCODE -eq 0) {
-        Ok "GitHub authenticated via token (shared account)"
-        gh auth setup-git 2>$null   # let git clone private repos via gh credentials
-        # Persist the read-only token so domi-guide's auto-update worker is self-contained:
-        # it reads this and exports GH_TOKEN, so updates work even if gh state is cleared/absent.
-        # Never committed to git; recommend a fine-grained, single-repo, read-only PAT.
+        Ok "GitHub authenticated via token"
+    } else {
+        Warn "Token login failed - falling back to interactive login (use YOUR OWN account)."
+        $Token = ""
+        gh auth login
+        if ($LASTEXITCODE -ne 0) { Warn "gh login not completed - run later: gh auth login, then re-run this script (idempotent)." }
+    }
+} else {
+    Info "Log in with YOUR OWN GitHub account (pick GitHub.com -> HTTPS -> Login with a web browser)..."
+    gh auth login
+    if ($LASTEXITCODE -ne 0) { Warn "gh login not completed - run later: gh auth login, then re-run this script (idempotent)." }
+}
+gh auth status 2>&1 | Out-Null
+if ($LASTEXITCODE -eq 0) {
+    gh auth setup-git 2>$null   # let git clone private repos via gh credentials
+    # Persist a token so domi-guide's auto-update worker is self-contained:
+    # it reads this and exports GH_TOKEN, so updates work even if gh state is
+    # cleared/absent. Source: the -Token PAT if given, else gh's own oauth
+    # token (gh already stores it on disk - copying it adds no new exposure).
+    # Never committed to git.
+    $auToken = $Token
+    if (-not $auToken) { $auToken = (gh auth token 2>$null) }
+    if ($auToken) {
         $auDir = Join-Path $env:USERPROFILE ".claude\.domi-autoupdate"
         New-Item -ItemType Directory -Force -Path $auDir | Out-Null
         $tokFile = Join-Path $auDir "gh-token"
-        [IO.File]::WriteAllText($tokFile, $Token)
+        [IO.File]::WriteAllText($tokFile, $auToken)
         # Lock down ACL to the current user only (closest Windows equivalent of chmod 600).
         icacls $tokFile /inheritance:r /grant:r "$($env:USERNAME):F" 2>$null | Out-Null
-        Ok "Saved read-only token for plugin auto-update (~\.claude\.domi-autoupdate\gh-token)"
-    } else {
-        Fail "Token login failed - check the -Token PAT (fine-grained, domi-claude-plugins Contents: Read)."
+        Ok "Saved token for plugin auto-update (~\.claude\.domi-autoupdate\gh-token)"
     }
-} elseif ($alreadyAuthed) {
-    Ok "Already authenticated to GitHub"
-} else {
-    Info "No token - falling back to interactive login (HTTPS + web browser)..."
-    gh auth login
 }
 
 # -- 7. Project directory ------------------------------------
@@ -353,7 +368,7 @@ try { Write-Host "    claude CLI   installed" } catch { Write-Host "    claude C
 Write-Host ""
 Write-Host "  Plugins (personal machine, via domi-claude-plugins marketplace):"
 Write-Host "    individual-agent [OK]  your personal repo behaviour + /note"
-Write-Host "    asset            [OK]  /asset:knowledge-* — share results as company assets"
+Write-Host "    asset            [OK]  /asset:knowledge-* - share results as company assets"
 Write-Host "    hub-relay        [OK]  /hub - work on hub-side project agents"
 Write-Host "    domi-guide       [OK]  /guide interactive tutorial"
 if ($installWB -match '^[yY]$') {

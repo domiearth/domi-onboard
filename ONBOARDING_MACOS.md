@@ -63,8 +63,8 @@ clone 你自己的 agent repo 會用到。三種方式看:
 | 2 | **Claude Code CLI** | 第一次開 `claude` 會要登入,跟著畫面用 Anthropic 帳號登入(**帳號 / 授權找 Corey**,不要自己亂註冊) |
 | 3 | **Claude Desktop** | 開 app 後登入,**帳號找 Corey** |
 
-> 💡 若窗口給你**帶 `-t` 參數**的指令(見下方[帶參數一鍵安裝](#帶參數一鍵安裝共用帳號--免互動)),
-> 登入 #1 會用 token 自動完成,**不會跳瀏覽器**。
+> 💡 登入 #1 請用**你自己的 GitHub 帳號**(2026-08 起全員個人帳號制)。
+> 帶 `-t` token 的免互動安裝只給 CI / bot 用,見下方[帶參數一鍵安裝](#帶參數一鍵安裝免互動--ci-bot)。
 
 ---
 
@@ -91,10 +91,10 @@ curl -fsSL https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard
 
 > ⚠️ **不要加 `sudo`**(`sudo curl … | bash` ❌)。root + pipe 會讓 Homebrew 拒裝、sudo 密碼在非 TTY 對不上。script 內部要 sudo 的地方(brew)會自己跳密碼。
 
-### 帶參數一鍵安裝(共用帳號 / 免互動)
+### 帶參數一鍵安裝(免互動 / CI-bot)
 
-公司**共用一個 GitHub 帳號**時,純走瀏覽器登入會裝不了私有 plugin。這時 onboarding 窗口
-會給你一條**已帶參數**的指令,貼一次就全自動(GitHub 登入 + hub 連線都帶好):
+**一般人不需要這段** —— 預設流程就是用你自己的 GitHub 帳號互動登入。這段留給
+CI / bot / 特殊佈署,由窗口給你**已帶參數**的指令,貼一次就全自動:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/domiearth/domi-onboard/main/onboard-macos.sh -o ~/onboard-macos.sh && \
@@ -103,7 +103,7 @@ bash ~/onboard-macos.sh -t <GitHub PAT> -h 192.168.0.141 --host-tailscale 100.72
 
 | 參數 | 作用 | 省略時 |
 |---|---|---|
-| `-t` / `--token` | 用共用帳號 PAT 登入 GitHub(裝私有 plugin 必需) | 讀環境變數 `DOMI_GH_TOKEN`,再沒有就**隱藏輸入**讓你貼 |
+| `-t` / `--token` | 用 PAT 登入 GitHub(CI/bot 用;登入失敗會 fallback 互動式登入) | 讀環境變數 `DOMI_GH_TOKEN`,再沒有就走**互動式 `gh auth login`**(用你自己的帳號) |
 | `-h` / `--host` | AgentHUB LAN 位址 | 預設 `192.168.0.141` |
 | `--host-tailscale` | AgentHUB Tailscale 位址 | 預設 `100.72.24.53` |
 | `-u` / `--user` | hub ssh 帳號 | 預設 `domi` |
@@ -179,18 +179,27 @@ source ~/.zprofile
 1. 確認已被加入 `domiearth` org(找 admin)
 2. 重跑 `gh auth login`,scope 含 `repo`
 
-### `gh` 顯示登入的是「共用帳號」(不是我自己)/ 要不要每次 switch?
+### `gh` 顯示登入的是「共用帳號」(不是我自己)?
 
-**不用每次 switch。** onboarding 為了省 GitHub seat,是用**共用帳號 PAT** 登入 `gh`(`gh auth login --with-token`),所以 `gh auth status` 預設 active 身分是共用帳號、不是你本人。
+**這是舊制殘留,現在必須切回自己。** 2026-08 起 org 已回 Free plan、全員用**個人帳號**
+重新加入 —— 共用帳號 PAT 登入是省 seat 時代的暫時作法,已廢止。你的 `gh` 身分會一路
+影響 `agent-self-<handle>`、`~/.domi-hub.json` 的 `github_account`、以及 hub 端
+project-protect 的權限判定 —— **登錯人 = 所有 hub 操作掛錯人、權限對不上**(真實案例:
+有人 json 裡是別人的帳號,在 hub 上被 guard 擋到做不了事)。
 
-- **plugin 自動更新不受影響** — 它自己讀 `~/.claude/.domi-autoupdate/gh-token`、在背景子程序用該 token fetch,跟 `gh` 現在登入誰**完全無關**;你切成自己帳號也不會弄壞自動更新。
-- **想讓自己的 commit / PR / push 正確歸屬到你本人**(建議):把 `gh` 預設切成你自己的帳號,**切一次就固定**(存在 `~/.config/gh/hosts.yml`,onboarding 不會用環境變數壓過它,不會自己彈回去):
-  ```bash
-  gh auth status                      # 看目前有哪些帳號、誰是 active
-  gh auth switch -u <你的github帳號>   # 切成你自己的(持久,不必每次切)
-  gh auth setup-git                   # 讓 git push 也走你自己的憑證
-  ```
-- 前提:你自己帳號要在 `domiearth` org 裡。跨別人的 repo 一律走 `/hub run`,不靠本機 `gh`。
+清理步驟(一次做完就固定):
+
+```bash
+gh auth status                      # 看目前有哪些帳號、誰是 active
+gh auth switch -u <你的github帳號>   # 切成你自己的;沒登過就 gh auth login
+gh auth setup-git                   # 讓 git push 也走你自己的憑證
+gh auth logout -u <共用帳號>         # 建議順手登出共用帳號,免得再切錯
+# 最關鍵:把 hub 身分改成你自己 —— 重跑 hub-setup(或手改 ~/.domi-hub.json 的 github_account)
+bash ~/.claude/plugins/cache/domi-claude-plugins/hub-relay/*/scripts/hub-setup.sh
+```
+
+- **plugin 自動更新**:它讀 `~/.claude/.domi-autoupdate/gh-token`;重跑 onboarding script(idempotent)會用你自己的 token 重寫這個檔。
+- 前提:你自己帳號要在 `domiearth` org 裡(現在大家都加回來了;沒有就找 Corey)。跨別人的 repo 一律走 `/hub run`,不靠本機 `gh`。
 
 ### AgentHUB 連線失敗
 

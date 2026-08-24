@@ -14,8 +14,9 @@ set -euo pipefail
 #   bash onboard-macos-12.sh [-t GH_TOKEN] [-h HUB_HOST]
 #   curl -fsSL <raw-url> -o ~/onboard.sh && bash ~/onboard.sh -t <token> -h 192.168.0.141
 #
-#   -t / --token            共用帳號的 GitHub PAT(私有 marketplace + repo 都靠它)。
-#                           省略則讀環境變數 DOMI_GH_TOKEN,再省略則隱藏輸入(不進 history)。
+#   -t / --token            (選用,CI/bot 用)GitHub PAT。一般人不用帶 ——
+#                           預設走 `gh auth login` 用你自己的 GitHub 帳號登入。
+#                           省略則讀環境變數 DOMI_GH_TOKEN,再省略走互動式登入。
 #   -h / --host             AgentHUB LAN 位址(預設 192.168.0.141);傳給 hub-setup。
 #   --host-tailscale        AgentHUB Tailscale 位址(預設 100.72.24.53);傳給 hub-setup。
 #   -u / --user             hub ssh 帳號(預設 domi);傳給 hub-setup。
@@ -146,29 +147,43 @@ else
 fi
 
 # ── 6. GitHub auth ──────────────────────────────────────────
-# 共用帳號:用 PAT 登入(--with-token),省去每個人各自跑 web 流程。
-# token 來源優先序:-t 參數 → DOMI_GH_TOKEN 環境變數 → 隱藏輸入(不進 history)。
+# 個人帳號制(2026-08 起:org 回 Free plan、全員個人帳號重新加入):
+# 預設走 `gh auth login` 互動式登入 —— 用「你自己的」GitHub 帳號。這個身分
+# 會一路帶進 agent-self-<handle>、~/.domi-hub.json 的 github_account、以及
+# hub 端 project-protect 的權限判定,所以絕對不要再登共用帳號。
+# -t / DOMI_GH_TOKEN 保留給 CI / bot / 特殊情況(不再預設提示輸入);
+# token 登入失敗不再中止整個 onboarding,改 fallback 互動式登入。
 info "Checking GitHub auth..."
-if [[ -z "$GH_TOKEN_ARG" && -z "${DOMI_NONINTERACTIVE:-}" ]] && ! gh auth status &>/dev/null; then
-  info "貼上共用帳號的 GitHub PAT(輸入不會顯示,也不會留在 history)..."
-  read -r -s -p "  GitHub PAT: " GH_TOKEN_ARG </dev/tty; echo ""
-fi
-if [[ -n "$GH_TOKEN_ARG" ]]; then
-  printf '%s' "$GH_TOKEN_ARG" | gh auth login --with-token \
-    && ok "GitHub 已用 token 登入(共用帳號)" \
-    || fail "Token 登入失敗 — 檢查 PAT(建議 fine-grained、只授權 domi-claude-plugins 的 Contents: Read)。"
-  gh auth setup-git 2>/dev/null || true   # 讓 git clone 私有 repo 走 gh 憑證
-  # 持久化唯讀 token 給 plugin 自動更新器「自我內含」使用:domi-guide 背景 worker 會讀它
-  # export GH_TOKEN,即使 gh 被清/未裝/在乾淨環境也照樣更新,不再靜默吃 stale cache。
-  # chmod 600、絕不進任何 git。建議搭配 fine-grained、單 repo、唯讀 PAT 把外洩風險降到最低。
-  AU_DIR="$HOME/.claude/.domi-autoupdate"; mkdir -p "$AU_DIR"
-  ( umask 177; printf '%s' "$GH_TOKEN_ARG" > "$AU_DIR/gh-token" )
-  ok "已存唯讀 token 供 plugin 自動更新(~/.claude/.domi-autoupdate/gh-token,chmod 600)"
-elif gh auth status &>/dev/null; then
-  ok "Already authenticated to GitHub"
+if gh auth status &>/dev/null; then
+  ok "Already authenticated to GitHub ($(gh api user --jq .login 2>/dev/null || echo '?'))"
+elif [[ -n "$GH_TOKEN_ARG" ]]; then
+  if printf '%s' "$GH_TOKEN_ARG" | gh auth login --with-token; then
+    ok "GitHub 已用 token 登入"
+  else
+    warn "Token 登入失敗 — 改用互動式登入(用你自己的帳號)。"
+    GH_TOKEN_ARG=""
+    if [[ -z "${DOMI_NONINTERACTIVE:-}" ]]; then
+      gh auth login </dev/tty || warn "gh 登入未完成 — 稍後手動:gh auth login,再重跑本 script(idempotent)。"
+    fi
+  fi
+elif [[ -z "${DOMI_NONINTERACTIVE:-}" ]]; then
+  info "用你自己的 GitHub 帳號登入(選 GitHub.com → HTTPS → Login with a web browser)..."
+  gh auth login </dev/tty || warn "gh 登入未完成 — 稍後手動:gh auth login,再重跑本 script(idempotent)。"
 else
-  info "沒有 token — 改用互動式登入(選 HTTPS + web browser)..."
-  gh auth login
+  warn "Non-interactive 且未帶 token — 跳過 GitHub 登入(之後手動:gh auth login)。"
+fi
+if gh auth status &>/dev/null; then
+  gh auth setup-git 2>/dev/null || true   # 讓 git clone 私有 repo 走 gh 憑證
+  # 持久化 token 給 plugin 自動更新器「自我內含」使用:domi-guide 背景 worker 讀它
+  # export GH_TOKEN,即使 gh 被清/不在 PATH 也照樣更新,不再靜默吃 stale cache。
+  # 來源:-t 給的 PAT,否則 gh 自己的 oauth token(gh 本來就存在 ~/.config/gh,
+  # 複製一份非新增曝險面)。chmod 600、絕不進任何 git。
+  AU_DIR="$HOME/.claude/.domi-autoupdate"; mkdir -p "$AU_DIR"
+  _AU_TOKEN="${GH_TOKEN_ARG:-$(gh auth token 2>/dev/null || true)}"
+  if [[ -n "$_AU_TOKEN" ]]; then
+    ( umask 177; printf '%s' "$_AU_TOKEN" > "$AU_DIR/gh-token" )
+    ok "已存 token 供 plugin 自動更新(~/.claude/.domi-autoupdate/gh-token,chmod 600)"
+  fi
 fi
 
 # ── 7. Project dir + 7b. 個人 agent repo ────────────────────
