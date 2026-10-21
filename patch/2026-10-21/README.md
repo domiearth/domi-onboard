@@ -1,4 +1,4 @@
-# DOMI patch 2026-10-21 — 補裝 jq
+# DOMI patch 2026-10-21 — 補裝 jq(+ Windows 補裝 python3)
 
 > **對象:已經跑過 onboarding 的機器**。全新機器不用這支 —— 完整的
 > [`onboard-macos.sh`](../../onboard-macos.sh) / [`onboard-macos-12.sh`](../../onboard-macos-12.sh) /
@@ -15,6 +15,17 @@ artifact 登記、log、drive 查詢都要 `jq`,**沒有就直接停在「需要
 | macOS 15 | 系統內建 `/usr/bin/jq`,沒事(patch 會直接說「已經有了」) |
 | macOS 12 / 13 / 14 | **沒有 jq → asset 壞** |
 | Windows | **沒有 jq → asset 壞** |
+
+### Windows 另外補 `python3`(同日追加)
+
+個人機 plugin 有 6 個 hook 用 `python3` 跑 —— 包括 `individual-agent` 擋「個人帳號開 repo / 對外部署」
+的那道 guard、domi-guide 的自動更新、asset 的 artifact hook。Windows 沒有 `python3`:這個名字會落到
+Microsoft Store 的佔位程式,只印「Python was not found」→ **這些 hook 不報錯、只是什麼都沒做**。
+winget / python.org 的 Python 也只給 `python` / `py`,沒有 `python3`。
+
+所以 Windows patch 用 **uv** 裝 Python 3.12(`uv python install --default` 會同時放 `python.exe` 和
+`python3.exe` 到 `%USERPROFILE%\.local\bin`),再把那個資料夾排到使用者 PATH 最前面,蓋過 Store 佔位。
+已經有可用 `python3` 的機器會直接跳過。
 
 ## 怎麼跑
 
@@ -36,7 +47,7 @@ $f="$env:TEMP\patch-windows.ps1"; irm https://raw.githubusercontent.com/domieart
 
 ## 跑完怎麼確認
 
-終端機打 `jq --version`,印出 `jq-1.x` 就好了。然後**開新的** Claude Code session。
+終端機打 `jq --version`,印出 `jq-1.x` 就好了;Windows 再打 `python3 --version`,要印出 `Python 3.x`。然後**開新的** Claude Code session。
 
 ## 為什麼 macOS 12 要用編的
 
@@ -52,4 +63,5 @@ jq 官方的 macOS 執行檔有最低系統版本(讀 Mach-O `LC_BUILD_VERSION` 
 | 「沒有 Homebrew 也沒有 Command Line Tools」 | 先跑 `xcode-select --install`,裝完再重跑 |
 | 「sha256 對不上」 | 不會安裝。截圖找 Kirin |
 | 裝完 `jq --version` 找不到 | 關掉終端機重開 |
+| Windows:裝完 `python3` 還是跳出 Microsoft Store / 「not found」 | 設定 → 應用程式 → 進階應用程式設定 → **應用程式執行別名**,把 `python.exe` / `python3.exe` 關掉,重開終端機 |
 | 跑到一半中斷 | 直接重跑,已裝好會跳過 |

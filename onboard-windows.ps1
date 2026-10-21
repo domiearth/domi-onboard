@@ -105,6 +105,62 @@ if (Test-Command "jq") {
     Warn "jq installed but not in PATH yet. Restart terminal after script completes."
 }
 
+# -- 2c. python3 (plugin hooks need it) ----------------------
+# individual-agent's hooks (incl. the org-escape guard), domi-guide's
+# auto-update worker, asset's artifact hooks and /individual-agent:version all
+# run `python3`. Windows has no python3: the name resolves to the Microsoft
+# Store placeholder (WindowsApps\python3.exe), which only prints "Python was
+# not found" - so those hooks silently do NOTHING (no error surfaces).
+# The python.org / winget Python installers do NOT ship python3.exe either
+# (only python.exe + py.exe). uv does: `uv python install --default` puts
+# python.exe AND python3.exe in %USERPROFILE%\.local\bin (TECH_STACK: Python
+# via uv). We then make sure that dir comes BEFORE WindowsApps on the user PATH,
+# or the Store placeholder keeps winning.
+function Test-RealPython3 {
+    $c = Get-Command "python3" -ErrorAction SilentlyContinue
+    if (-not $c -or $c.Source -match "WindowsApps") { return $false }
+    $prev = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+    $v = (& python3 -c "import sys; print(sys.version_info[0])" 2>$null)
+    $ok = ($LASTEXITCODE -eq 0 -and "$v".Trim() -eq "3")
+    $ErrorActionPreference = $prev
+    return $ok
+}
+function Add-UserPathFront([string]$Dir) {
+    $user  = [System.Environment]::GetEnvironmentVariable("Path", "User")
+    $parts = @($user -split ';' | Where-Object { $_ -and ($_.TrimEnd('\') -ne $Dir.TrimEnd('\')) })
+    [System.Environment]::SetEnvironmentVariable("Path", (@($Dir) + $parts) -join ';', "User")
+}
+
+Info "Checking python3..."
+if (Test-RealPython3) {
+    Ok "python3 already installed ($((Get-Command python3).Source))"
+} else {
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"   # uv writes progress to stderr; PS 5.1 + Stop would abort
+    if (-not (Get-Command "uv" -ErrorAction SilentlyContinue)) {
+        Info "Installing uv (Python manager)..."
+        winget install --id astral-sh.uv --accept-source-agreements --accept-package-agreements
+        Refresh-Path
+    }
+    $uvBin = Join-Path $env:USERPROFILE ".local\bin"
+    if (Get-Command "uv" -ErrorAction SilentlyContinue) {
+        Info "Installing Python 3.12 via uv (with python3.exe)..."
+        uv python install 3.12 --default --preview
+        Add-UserPathFront $uvBin
+        Refresh-Path
+    } else {
+        Warn "uv not on PATH yet - restart terminal and re-run this script (idempotent)."
+    }
+    $ErrorActionPreference = $prevEAP
+    if (Test-RealPython3) {
+        Ok "python3 $(python3 --version) ($((Get-Command python3).Source))"
+    } else {
+        Warn "python3 still not usable. Plugin guards / auto-update will NOT run until it is."
+        Warn "  Fix: close and reopen PowerShell, re-run this script. Still failing -> screenshot to Kirin."
+        Warn "  Also: Settings > Apps > Advanced app settings > App execution aliases -> turn OFF python3.exe / python.exe"
+    }
+}
+
 # -- 3. Node.js -----------------------------------------------
 
 Info "Checking Node.js..."
@@ -355,7 +411,7 @@ Ok "domi-claude-plugins done"
 # dependency here.
 Write-Host ""
 Info "AgentHUB connection setup"
-$hubSetup = Get-ChildItem "$env:USERPROFILE\.claude\plugins\cache\domi-claude-plugins\hub-relay\*\scripts\hub-setup.ps1" -ErrorAction SilentlyContinue | Sort-Object FullName | Select-Object -Last 1
+$hubSetup = Get-ChildItem "$env:USERPROFILE\.claude\plugins\cache\domi-claude-plugins\hub-relay\*\scripts\hub-setup.ps1" -ErrorAction SilentlyContinue | Sort-Object { try { [version]$_.Directory.Parent.Name } catch { [version]"0.0" } } | Select-Object -Last 1   # by version, not text: 0.9.31 > 0.9.9
 if ($hubSetup) {
     Info "Launching hub-setup (host / user / password / your GitHub account)..."
     Write-Host "  Don't have the hub host/creds yet? Press Enter through to skip - run it later."
@@ -381,6 +437,7 @@ Write-Host "  Installed:"
 try { Write-Host "    git          $(git --version)" } catch { Write-Host "    git          (restart terminal)" }
 try { Write-Host "    gh           $(gh --version | Select-Object -First 1)" } catch { Write-Host "    gh           (restart terminal)" }
 try { Write-Host "    node         $(node --version)" } catch { Write-Host "    node         (restart terminal)" }
+if (Test-RealPython3) { Write-Host "    python3      $(python3 --version)" } else { Write-Host "    python3      (missing / restart terminal - plugin guards need it)" }
 try { Write-Host "    claude CLI   installed" } catch { Write-Host "    claude CLI   (restart terminal)" }
 Write-Host ""
 Write-Host "  Plugins (personal machine, via domi-claude-plugins marketplace):"
@@ -405,7 +462,7 @@ Write-Host "------------------------------------------------------" -ForegroundC
 
 Write-Host ""
 Warn "If any tools show 'restart terminal', close and reopen PowerShell, then verify with:"
-Write-Host "    git --version && gh --version && node --version && claude --version"
+Write-Host "    git --version && gh --version && node --version && claude --version && jq --version && python3 --version"
 
 # -- 11. Guided first session (optional) ---------------------
 # Auto-start: seed a NATURAL-LANGUAGE prompt (first char != /) that asks Claude

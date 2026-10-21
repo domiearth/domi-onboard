@@ -129,7 +129,7 @@ Ok "plugins done (individual-agent / hub-relay / domi-guide / asset)"
 # -- 4. Hub identity: re-run hub-setup with the right account ------
 # After the plugin update, so the NEW hub-setup (0.9.28+ identity guard) runs.
 Info "Step 4/4 - fix AgentHUB identity (hub-setup)"
-$hubSetup = Get-ChildItem "$env:USERPROFILE\.claude\plugins\cache\domi-claude-plugins\hub-relay\*\scripts\hub-setup.ps1" -ErrorAction SilentlyContinue | Sort-Object FullName | Select-Object -Last 1
+$hubSetup = Get-ChildItem "$env:USERPROFILE\.claude\plugins\cache\domi-claude-plugins\hub-relay\*\scripts\hub-setup.ps1" -ErrorAction SilentlyContinue | Sort-Object { try { [version]$_.Directory.Parent.Name } catch { [version]"0.0" } } | Select-Object -Last 1
 if ($hubSetup) {
     Write-Host "  It asks host / user / password - press Enter to keep existing values."
     $hubArgs = @{ GithubAccount = $login }
@@ -157,9 +157,9 @@ if ($hubAcct -eq $login) {
 } else {
     Write-Host "    hub identity    '$hubAcct' [X] should be $login - re-run step 4 hub-setup" -ForegroundColor Yellow
 }
-$hrVer = (Get-ChildItem "$env:USERPROFILE\.claude\plugins\cache\domi-claude-plugins\hub-relay" -ErrorAction SilentlyContinue | Sort-Object Name | Select-Object -Last 1).Name
+$hrVer = (Get-ChildItem "$env:USERPROFILE\.claude\plugins\cache\domi-claude-plugins\hub-relay" -ErrorAction SilentlyContinue | Sort-Object { try { [version]$_.Name } catch { [version]"0.0" } } | Select-Object -Last 1).Name
 Write-Host "    hub-relay       $hrVer (want >= 0.9.28)"
-$asVer = (Get-ChildItem "$env:USERPROFILE\.claude\plugins\cache\domi-claude-plugins\asset" -ErrorAction SilentlyContinue | Sort-Object Name | Select-Object -Last 1).Name
+$asVer = (Get-ChildItem "$env:USERPROFILE\.claude\plugins\cache\domi-claude-plugins\asset" -ErrorAction SilentlyContinue | Sort-Object { try { [version]$_.Name } catch { [version]"0.0" } } | Select-Object -Last 1).Name
 if ($asVer) { Write-Host "    asset           [OK] $asVer" } else { Write-Host "    asset           [X] install failed - ask Corey" -ForegroundColor Yellow }
 Write-Host ""
 Write-Host "  Open a NEW claude session for everything to take effect."
