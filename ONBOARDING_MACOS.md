@@ -117,7 +117,8 @@ bash ~/onboard-macos.sh -t <GitHub PAT> -h 192.168.0.141 --host-tailscale 100.72
 - **Homebrew 自動安裝** — 沒裝過會幫你裝;Apple Silicon 自動 `eval` brew 環境變數。
 - **Claude Desktop 安裝失敗** — fallback 到「請手動下載」提示,open <https://claude.ai/download>。
 - **gh auth login 是互動式** — 跟著 prompt(建議 HTTPS + browser 認證)。
-- **裝哪些 plugin** — 個人機只裝 `individual-agent` · `hub-relay` · `domi-guide`(治理 guard 在 hub 端把關,個人機不裝)。詳見 [README 安裝矩陣](./README.md#plugin-安裝矩陣)。
+- **裝哪些 plugin** — 個人機只裝 `individual-agent` · `hub-relay` · `domi-guide` · `asset`(治理 guard 在 hub 端把關,個人機不裝)。詳見 [README 安裝矩陣](./README.md#plugin-安裝矩陣)。
+- **jq** — `asset` plugin 沒有它就不能分享(2026-10-21 起 onboarding 會裝;已裝好的機器跑 [`patch/2026-10-21/`](./patch/2026-10-21/))。
 - **AgentHUB 連線設定** — Step 9b 問 host / user / password / **你的 GitHub 帳號**(身分,務必填);host / user 跟 onboarding 窗口索取。全部留空可跳過,稍後再跑 `hub-setup.sh`。
 - **新人導覽** — 最後一步(Step 11)會問要不要開導覽,**按 Enter 就對了**,Claude 會用中文一步一步帶你跑過工具與流程(自動開始;沒開始就在 session 內打 `/guide`)。跳過也沒關係,見下方。
 

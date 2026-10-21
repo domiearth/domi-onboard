@@ -108,6 +108,17 @@ if need_cmd gh; then
 fi
 ok "gh $(gh --version | head -1 | awk '{print $3}')"
 
+# ── 2b. jq(asset plugin 必需)────────────────────────────
+# asset(必裝四顆之一)分享知識 / 簡報 / 待辦 / artifact / log / drive 都要 jq,
+# 沒有就直接 die「需要 jq」;hub-relay 沒有 jq 會跳過送出前的權限預檢。
+# macOS 15 內建 /usr/bin/jq;13/14 沒有 → brew 裝。
+info "Checking jq..."
+if need_cmd jq; then
+  info "Installing jq..."
+  brew install jq
+fi
+ok "jq $(jq --version 2>/dev/null)"
+
 # ── 3. Node.js (required by Claude Code CLI) ────────────────
 
 info "Checking Node.js..."
@@ -294,7 +305,7 @@ else
   ok "DOMI marketplace registered"
 fi
 
-# Personal machines install ONLY these three. The governance guards
+# Personal machines install ONLY these four. The governance guards
 # (stack-guard / entity-guard / schema-change / project-protect / domi-init)
 # run on the AgentHUB, not here — cross-repo work goes through hub-relay and the
 # hub enforces them server-side. See domi-claude-plugins README (install matrix)

@@ -15,7 +15,8 @@
 > 🚀 **上線當天**:跑 [`GO_LIVE_CHECKLIST.md`](./GO_LIVE_CHECKLIST.md) 自檢(10 分鐘)。
 
 > 🩹 **已經 onboard 過的機器**要套用後續修正 → 看 [`patch/`](./patch/) 底下**最新日期**的資料夾
-> (每包自帶 README:對象、為什麼、怎麼跑)。目前最新:[`patch/2026-08-24/`](./patch/2026-08-24/)
+> (每包自帶 README:對象、為什麼、怎麼跑)。目前最新:[`patch/2026-10-21/`](./patch/2026-10-21/)
+> —— 補裝 jq(asset plugin 沒有它就不能分享)。上一包 [`patch/2026-08-24/`](./patch/2026-08-24/)
 > —— 個人帳號制清理 + 補裝 asset plugin(full onboarding 修不到「gh 登錯人」,這包會)。
 
 ---
