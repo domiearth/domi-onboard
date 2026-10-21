@@ -115,7 +115,8 @@ bash ~/onboard-macos-12.sh -t <GitHub PAT> -h 192.168.0.141 --host-tailscale 100
 - **git = Xcode 命令列工具** — 沒裝過會跳安裝視窗,按「安裝」等它好,再回終端機按 Enter。
 - **Node.js / gh = 官方 `.pkg`** — 會用 sudo 安裝(跳密碼正常)。
 - **Claude Desktop** — macOS 12 走手動下載:<https://claude.ai/download>,裝好回終端機按 Enter。
-- **裝哪些 plugin** — 個人機只裝 `individual-agent` · `hub-relay` · `domi-guide`(治理 guard 在 hub 端把關)。詳見 [README 安裝矩陣](./README.md#plugin-安裝矩陣)。
+- **裝哪些 plugin** — 個人機只裝 `individual-agent` · `hub-relay` · `domi-guide` · `asset`(治理 guard 在 hub 端把關)。詳見 [README 安裝矩陣](./README.md#plugin-安裝矩陣)。
+- **jq** — `asset` plugin 沒有它就不能分享(2026-10-21 起 onboarding 會裝;已裝好的機器跑 [`patch/2026-10-21/`](./patch/2026-10-21/))。
 - **AgentHUB 連線設定** — 會跑 `hub-setup`,問 host / user / password / **你的 GitHub 帳號**(身分,務必填);沒拿到 hub 資訊可全部按 Enter 跳過,稍後再跑。
 - **新人導覽** — 最後一步會問要不要開導覽,**按 Enter 就對了**;session 開啟後**把 `/domi-guide:guide all` 整段複製貼上**開始教學(沒開始就打這行)。跳過也沒關係,見下方。
 

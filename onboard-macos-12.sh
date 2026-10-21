@@ -124,6 +124,35 @@ else
   have gh || fail "gh 還沒裝好,請手動安裝後重跑。"
 fi
 
+# ── 3b. jq(asset plugin 必需;macOS 12 只能從原始碼編)──────
+# asset(必裝四顆之一)沒有 jq 就 die「需要 jq」。
+# ⚠️ jq 官方 macOS binary 最低要求:1.8.x = macOS 14、1.7.1 = macOS 13(讀 Mach-O
+# LC_BUILD_VERSION 實測)→ macOS 12 **沒有可用的官方 binary**。brew 在 12 又會走源碼編譯。
+# 所以直接用 step 1 裝好的 Command Line Tools 編官方 release tarball(C,約 1–2 分鐘),
+# 版本 + sha256 釘死。oniguruma 用內建的、--disable-shared(否則 ./jq 是 libtool wrapper,單獨複製會壞)。
+JQ_VER="1.8.2"
+JQ_SHA256="71b8d6e8f5fe81f6c6d0d110e3892251f6ce76ed095abd315e26e6e1193af3af"
+info "Checking jq..."
+if have jq; then
+  ok "jq $(jq --version) already installed"
+else
+  info "Building jq $JQ_VER from source(macOS 12 沒有官方 binary;約 1–2 分鐘,裝進 /usr/local/bin 需要 sudo)..."
+  _jqdir="$(mktemp -d)"
+  if curl -fsSL "https://github.com/jqlang/jq/releases/download/jq-${JQ_VER}/jq-${JQ_VER}.tar.gz" -o "$_jqdir/jq.tar.gz" \
+     && [[ "$(shasum -a 256 "$_jqdir/jq.tar.gz" | awk '{print $1}')" == "$JQ_SHA256" ]] \
+     && tar -xzf "$_jqdir/jq.tar.gz" -C "$_jqdir" \
+     && ( cd "$_jqdir/jq-${JQ_VER}" \
+          && ./configure --quiet --disable-docs --disable-maintainer-mode --disable-shared --with-oniguruma=builtin --prefix=/usr/local >/dev/null \
+          && make -s -j"$(sysctl -n hw.ncpu 2>/dev/null || echo 2)" >/dev/null 2>&1 \
+          && sudo mkdir -p /usr/local/bin \
+          && sudo install -m 755 jq /usr/local/bin/jq ); then
+    ok "jq $(/usr/local/bin/jq --version) installed"
+  else
+    warn "jq 編譯/安裝失敗 —— asset plugin 的分享功能會不能用。找 Kirin / Corey 協助手動裝。"
+  fi
+  rm -rf "$_jqdir"
+fi
+
 # ── 4. Claude Code CLI(npm,與 macos.sh 相同)──────────────
 info "Checking Claude Code CLI..."
 if have claude; then

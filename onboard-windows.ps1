@@ -88,6 +88,23 @@ if (Test-Command "gh") {
     Ok "gh $(gh --version | Select-Object -First 1)"
 }
 
+# -- 2b. jq (asset plugin needs it) --------------------------
+# asset (one of the four required plugins) dies with "jq required" on share /
+# deck / task / artifact / log / drive without it; hub-relay skips its
+# pre-send permission check. Git Bash sees jq.exe via the Windows PATH.
+
+Info "Checking jq..."
+if (-not (Test-Command "jq")) {
+    Info "Installing jq..."
+    winget install --id jqlang.jq --accept-source-agreements --accept-package-agreements
+    Refresh-Path
+}
+if (Test-Command "jq") {
+    Ok "jq $(jq --version)"
+} else {
+    Warn "jq installed but not in PATH yet. Restart terminal after script completes."
+}
+
 # -- 3. Node.js -----------------------------------------------
 
 Info "Checking Node.js..."
@@ -318,7 +335,7 @@ if ($marketplaceList -match "domi-claude-plugins") {
     Ok "DOMI marketplace registered"
 }
 
-# Personal machines install ONLY these three. The governance guards
+# Personal machines install ONLY these four. The governance guards
 # (stack-guard / entity-guard / schema-change / project-protect / domi-init)
 # run on the AgentHUB, not here - cross-repo work goes through hub-relay and the
 # hub enforces them server-side. See domi-claude-plugins README (install matrix)
