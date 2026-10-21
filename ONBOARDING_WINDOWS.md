@@ -133,6 +133,7 @@ $f="$env:TEMP\onboard-windows.ps1"; irm https://raw.githubusercontent.com/domiea
 - **gh auth login 走瀏覽器** — 跟著 prompt。
 - **裝哪些 plugin** — 個人機只裝 `individual-agent` · `hub-relay` · `domi-guide` · `asset`(治理 guard 在 hub 端把關)。詳見 [README 安裝矩陣](./README.md#plugin-安裝矩陣)。
 - **jq** — `asset` plugin 沒有它就不能分享(2026-10-21 起 onboarding 會裝;已裝好的機器跑 [`patch/2026-10-21/`](./patch/2026-10-21/))。
+- **python3(用 uv 裝)** — plugin 的 guard / 自動更新都用 `python3` 跑;Windows 沒有它時那些 hook **不報錯、直接沒作用**。winget 版 Python 沒有 `python3.exe`,所以改用 uv(2026-10-21 起 onboarding 會裝;已裝好的機器跑同一包 patch)。
 - **AgentHUB 連線設定** — Step 9b 問 host / user / password / **你的 GitHub 帳號**(身分,務必填);host / user 跟 onboarding 窗口索取。留空可跳過,稍後再跑 `hub-setup.ps1`。
 - **新人導覽** — 最後一步會問要不要開導覽,**按 Enter 就對了**,教學會自動開始(沒開始就在 session 內打 `/guide`)。跳過也沒關係,見下方。
 
