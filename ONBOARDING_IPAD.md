@@ -77,17 +77,17 @@ iPad 沒鍵盤時打字會痛苦,**建議只用來看,不用來操作**。
 
 1. 裝 **Blink Shell**(付費,體驗最好)或 **Termius**(免費版夠用)。
 2. `ssh <你的帳號>@100.72.24.53`
-3. `tmux attach` → `claude`
+3. `hc attach`(挑一個在跑的,或選 new… 開新的)→ `claude`
 
-斷線 = tmux detach **不是** kill,回來 `tmux attach` 接續同一個 session。
-原理見 `foreman/doc/ws-tmux-claude-resumable-session.md`。
+斷線 = 離開(detach)**不是** kill,回來 `hc attach` 接續同一個。主動離開按 `Ctrl+\`。
+(2026-11-19 起 hub 用 herdr-core 取代 tmux,WB-304。)原理見 `foreman/doc/ws-tmux-claude-resumable-session.md`。
 
 ⚠️ **請用你自己的 hub 帳號,不要共用 `domi` 帳號登入。**
 DOMI 的治理模型是 **一人 ↔ 一 repo ↔ 一個人 agent**(`foreman/AGENT_REPO_POLICY.md`);
 共用帳號會讓個人身分、`agent-self-<handle>` 個人 repo、per-user worktree、github handshake 全部失效。
 沒有自己的 hub 帳號就先開一個,不要借用。
 
-> **強烈建議接外接鍵盤。** 螢幕鍵盤打不了 Ctrl / Esc,tmux 跟 Claude Code 都會很難用。
+> **強烈建議接外接鍵盤。** 螢幕鍵盤打不了 Ctrl / Esc,`hc attach` 跟 Claude Code 都會很難用。
 
 ---
 
