@@ -25,12 +25,14 @@ Script idempotent — 已裝的會跳過,重複跑安全。
 - **uv**(Python toolkit manager → `~/.local/bin`)
 - **Rust** stable(via rustup → `~/.cargo`)
 - **Claude Code CLI**(npm global → `~/.local`)
+- **herdr-core(`hc`)** 0.1.21 —— agent 工作台，取代 tmux(WB-304)。官方安裝腳本(驗 sha256)→ `~/.local/bin/herdr-core`,並寫好 `~/.config/systemd/user/herdr-core.service` 開機常駐
 
 **Part B — System-level**(需 sudo prompt):
 - **GitHub CLI(`gh`)** — 官方 apt repo;**B2 私庫 marketplace 的前提**
 - `build-essential`(make / gcc / linker)
 - `shellcheck`(per TECH_STACK §6.2 MUST)
-- `sshpass`、`postgresql-client`、`tmux`
+- `sshpass`、`postgresql-client`(**不再裝 `tmux`** —— 2026-11-19 起 agent 工作台換成 herdr-core)
+- `loginctl enable-linger` —— 最後一個 SSH 登出後,herdr-core 裡的 agent 繼續跑
 
 > Part B 在非互動環境(如直接被 Claude Code Bash tool 呼叫)會 graceful fail,請用 SSH **互動 shell** 跑。
 
@@ -63,3 +65,15 @@ claude plugin list | grep domi-claude-plugins   # 應見 6 個治理 guard
 ```
 
 之後同仁從**個人機**用 `/hub run <repo> "<task>"` 把任務委派進 hub 上的 project agent。
+
+## herdr-core 速查(取代 tmux)
+
+| 以前(tmux) | 現在(herdr-core) |
+|---|---|
+| `tmux ls` | `hc ls`(`--all` 連已結束的) |
+| `tmux attach -t X` | `hc attach X`(離開 = `Ctrl+\`,裡面的程式繼續跑) |
+| `tmux new -d -s X cmd` | `hc run --bg --name X -- cmd` |
+| `tmux capture-pane -p` | `hc read X` |
+| `tmux send-keys "…" Enter` | `hc send X "…"` |
+
+> ⚠️ core 壞了一律 `systemctl --user restart herdr-core`,**不要**用 `hc server start` —— 也別在 core 沒跑時從 claude 裡下任何 `hc` 指令:它會自己起一個 core 並繼承 claude 的環境，裡面的 claude 就不存對話紀錄。

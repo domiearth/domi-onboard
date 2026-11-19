@@ -9,7 +9,7 @@ set -euo pipefail
 #
 # Idempotent: detects what's already installed; only installs what's missing.
 # Two sections:
-#   Part A — User-level installs (no sudo)   — node / pnpm / uv / rust
+#   Part A — User-level installs (no sudo)   — node / pnpm / uv / rust / claude / herdr-core
 #   Part B — System-level installs (needs sudo prompt at runtime)
 #            — build-essential / shellcheck / sshpass / postgresql-client / etc.
 #
@@ -124,6 +124,56 @@ else
   warn "npm not on PATH yet — open a new shell (source ~/.profile) then re-run to install claude"
 fi
 
+# A6. herdr-core (`hc`) — agent 工作台,取代 tmux(WB-304,2026-11-19)
+#     官方安裝腳本會驗 sha256;版本釘住,要升級改 HC_VERSION。
+#     ⚠️ core 一律由 systemd --user 啟動:任何 `hc` 指令在 core 沒跑時會「自己起一個 core」
+#     並繼承呼叫者的環境(從 claude 裡叫 = 裡面的 claude 不存 transcript)。
+HC_VERSION="${HC_VERSION:-0.1.21}"
+info "Checking herdr-core (hc)..."
+if [[ -x "$HOME/.local/bin/herdr-core" ]]; then
+  ok "herdr-core already installed ($("$HOME/.local/bin/herdr-core" --version 2>/dev/null | head -1))"
+else
+  info "Installing herdr-core $HC_VERSION..."
+  if curl -fsSL https://releases.herdr.dev/core/install.sh | HC_VERSION="$HC_VERSION" sh; then
+    ok "herdr-core installed"
+  else
+    warn "herdr-core install failed — retry: curl -fsSL https://releases.herdr.dev/core/install.sh | HC_VERSION=$HC_VERSION sh"
+  fi
+fi
+
+HC_UNIT="$HOME/.config/systemd/user/herdr-core.service"
+if [[ -x "$HOME/.local/bin/herdr-core" ]]; then
+  if [[ ! -f "$HC_UNIT" ]]; then
+    mkdir -p "$(dirname "$HC_UNIT")"
+    cat > "$HC_UNIT" <<'UNIT'
+[Unit]
+Description=herdr-core — agent 工作台 core(取代 tmux,WB-304)
+After=default.target
+
+[Service]
+Type=simple
+# login shell → 乾淨的使用者環境(不帶 CLAUDE_CODE_* 之類呼叫者變數)
+ExecStart=/bin/bash -lc 'exec %h/.local/bin/herdr-core serve'
+Restart=on-failure
+RestartSec=5
+# 每個 terminal 跑在自己的 hc-hold-*.service;core 重啟不砍它們
+KillMode=process
+OOMPolicy=continue
+
+[Install]
+WantedBy=default.target
+UNIT
+    ok "wrote $HC_UNIT"
+  else
+    ok "herdr-core.service already present"
+  fi
+  if systemctl --user daemon-reload 2>/dev/null && systemctl --user enable --now herdr-core 2>/dev/null; then
+    ok "herdr-core.service enabled + running"
+  else
+    warn "systemd --user not reachable from this shell — after SSH login run: systemctl --user enable --now herdr-core"
+  fi
+fi
+
 # ─── Part B: System-level installs (sudo prompt) ─────────────
 
 info ""
@@ -148,7 +198,8 @@ else
 fi
 
 NEED_APT=()
-for pkg in build-essential shellcheck sshpass postgresql-client tmux; do
+# tmux 不再安裝 —— agent 工作台已換成 herdr-core(見 A6,WB-304)
+for pkg in build-essential shellcheck sshpass postgresql-client; do
   if dpkg -s "$pkg" &>/dev/null; then
     ok "$pkg already installed"
   else
@@ -167,6 +218,15 @@ else
     warn "apt install failed or skipped. Re-run manually:"
     warn "  sudo apt install ${NEED_APT[*]}"
   fi
+fi
+
+# B1. linger —— 讓 herdr-core 與裡面的 agent 在最後一個 SSH 登出後繼續跑
+if [[ "$(loginctl show-user "$USER" -p Linger --value 2>/dev/null)" == "yes" ]]; then
+  ok "linger already enabled for $USER"
+elif sudo loginctl enable-linger "$USER"; then
+  ok "linger enabled for $USER (agents survive logout)"
+else
+  warn "enable-linger failed — run: sudo loginctl enable-linger $USER"
 fi
 
 # ─── Part B2: Governance plugins (hub-side enforcement) ──────
@@ -223,7 +283,7 @@ info "── Part C — Verification ──"
 echo ""
 printf "%-12s %s\n" "Tool" "Version"
 printf "%-12s %s\n" "────────────" "─────────────────────────"
-for cmd in node npm pnpm python3 uv cargo rustc gh jq git make gcc shellcheck sshpass psql; do
+for cmd in node npm pnpm python3 uv cargo rustc gh jq git make gcc shellcheck sshpass psql hc; do
   if have "$cmd"; then
     v=$($cmd --version 2>&1 | head -1)
     printf "✅ %-10s %s\n" "$cmd" "$v"
